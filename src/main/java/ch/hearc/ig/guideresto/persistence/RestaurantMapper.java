@@ -156,12 +156,49 @@ public class RestaurantMapper extends AbstractMapper<Restaurant> {
 
     @Override
     public boolean update(Restaurant object) {
-        return false;
+        Connection c = ConnectionUtils.getConnection();
+        String sql = "UPDATE RESTAURANTS " +
+                "SET NOM = ?, ADRESSE = ?, DESCRIPTION = ?, SITE_WEB = ?, FK_TYPE = ?, FK_VILL = ? " +
+                "WHERE NUMERO = ?";
+
+        try (PreparedStatement s = c.prepareStatement(sql)) {
+            s.setString(1, object.getName());
+            s.setString(2, object.getAddress().getStreet());
+            s.setString(3, object.getDescription());
+            s.setString(4, object.getWebsite());
+            s.setInt(5, object.getType().getId());
+            s.setInt(6, object.getAddress().getCity().getId());
+            s.setInt(7, object.getId());
+
+            int rowsAffected = s.executeUpdate();
+            c.commit();
+
+            return true;
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+            return false;
+        }
     }
 
     @Override
     public boolean delete(Restaurant object) {
+        Connection c = ConnectionUtils.getConnection();
+        String sql = "DELETE FROM RESTAURANTS WHERE NUMERO = ?";
+
+
+        //Faut encore aller suppr les likes d'abord zgegos
+        try (PreparedStatement s = c.prepareStatement(sql)) {
+            s.setInt(1, object.getId());
+
+            s.executeUpdate();
+            c.commit();
+            return true;
+
+    }
+        catch (SQLException ex) {
+            System.out.println(ex.getMessage());
         return false;
+        }
     }
 
 

@@ -18,7 +18,7 @@ public class Application {
 
     private static Scanner scanner;
     private static final Logger logger = LogManager.getLogger(Application.class);
-
+    static RestaurantMapper restMapper = new RestaurantMapper();
     public static void main(String[] args) {
         scanner = new Scanner(System.in);
 
@@ -265,7 +265,7 @@ public class Application {
         city.getRestaurants().add(restaurant);
         restaurantType.getRestaurants().add(restaurant);
         FakeItems.getAllRestaurants().add(restaurant);
-        RestaurantMapper restMapper = new RestaurantMapper();
+
         //zgeg
         restMapper.create(restaurant);
         showRestaurant(restaurant);
@@ -447,6 +447,8 @@ public class Application {
      * @param restaurant Le restaurant à modifier
      */
     private static void editRestaurant(Restaurant restaurant) {
+
+
         System.out.println("Edition d'un restaurant !");
 
         System.out.println("Nouveau nom : ");
@@ -463,6 +465,8 @@ public class Application {
             restaurant.setType(newType);
             newType.getRestaurants().add(restaurant);
         }
+
+        restMapper.update(restaurant);
 
         System.out.println("Merci, le restaurant a bien été modifié !");
     }
@@ -498,6 +502,10 @@ public class Application {
         System.out.println("Etes-vous sûr de vouloir supprimer ce restaurant ? (O/n)");
         String choice = readString();
         if (choice.equals("o") || choice.equals("O")) {
+
+            //zgeg
+            restMapper.delete(restaurant);
+
             FakeItems.getAllRestaurants().remove(restaurant);
             restaurant.getAddress().getCity().getRestaurants().remove(restaurant);
             restaurant.getType().getRestaurants().remove(restaurant);
