@@ -176,7 +176,7 @@ public class RestaurantMapper extends AbstractMapper<Restaurant> {
 
     @Override
     protected String getExistsQuery() {
-        return "SELECT 1 FROM restaurants WHERE id = ?";
+        return "SELECT 1 FROM restaurants WHERE numero = ?";
     }
 
     @Override
