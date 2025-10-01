@@ -2,6 +2,7 @@ package ch.hearc.ig.guideresto.presentation;
 
 import ch.hearc.ig.guideresto.business.*;
 import ch.hearc.ig.guideresto.persistence.FakeItems;
+import ch.hearc.ig.guideresto.persistence.RestaurantMapper;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -264,7 +265,9 @@ public class Application {
         city.getRestaurants().add(restaurant);
         restaurantType.getRestaurants().add(restaurant);
         FakeItems.getAllRestaurants().add(restaurant);
-
+        RestaurantMapper restMapper = new RestaurantMapper();
+        //zgeg
+        restMapper.create(restaurant);
         showRestaurant(restaurant);
     }
 
