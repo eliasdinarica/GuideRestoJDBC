@@ -77,14 +77,15 @@ public class RestaurantMapper extends AbstractMapper<Restaurant> {
     public Restaurant create(Restaurant object) {
         Connection c = ConnectionUtils.getConnection();
         try (
-                PreparedStatement s = c.prepareStatement("INSERT INTO RESTAURANTS (NOM, ADRESSE,DESCRIPTION,FK_TYPE,FK_VILL) VALUES (?, ?, ?, ?, ?)")
+                PreparedStatement s = c.prepareStatement("INSERT INTO RESTAURANTS (NOM, ADRESSE,DESCRIPTION,SITE_WEB,FK_TYPE,FK_VILL) VALUES (? ,?, ?, ?, ?, ?)")
         ) {
 
             s.setString(1, object.getName());
             s.setString(2, object.getAddress().getStreet());
             s.setString(3, object.getDescription());
-            s.setInt(4, object.getType().getId());
-            s.setInt(5, object.getAddress().getCity().getId());
+            s.setString(4, object.getWebsite());
+            s.setInt(5, object.getType().getId());
+            s.setInt(6, object.getAddress().getCity().getId());
 
             s.executeUpdate();
             c.commit();
