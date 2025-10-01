@@ -16,6 +16,7 @@ import java.util.*;
  */
 public class Application {
 
+    private static final RestaurantMapper restaurantMapper = new RestaurantMapper();
     private static Scanner scanner;
     private static final Logger logger = LogManager.getLogger(Application.class);
 
@@ -106,11 +107,18 @@ public class Application {
      * Affiche la liste de tous les restaurants, sans filtre
      */
     private static void showRestaurantsList() {
+
         System.out.println("Liste des restaurants : ");
 
-        Restaurant restaurant = pickRestaurant(FakeItems.getAllRestaurants());
+        Restaurant restaurant = pickRestaurant(restaurantMapper.findAll());
+        Set<Restaurant> all = restaurantMapper.findAll();
 
-        if (restaurant != null) { // Si l'utilisateur a choisi un restaurant, on l'affiche, sinon on ne fait rien et l'application va réafficher le menu principal
+        if (all == null || all.isEmpty()) {
+            System.out.println("Aucun restaurant trouvé.");
+            return;
+        }
+
+        if (all != null) { // Si l'utilisateur a choisi un restaurant, on l'affiche, sinon on ne fait rien et l'application va réafficher le menu principal
             showRestaurant(restaurant);
         }
     }
