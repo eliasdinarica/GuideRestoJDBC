@@ -1,10 +1,14 @@
 package ch.hearc.ig.guideresto.persistence;
 import ch.hearc.ig.guideresto.business.IBusinessObject;
 import ch.hearc.ig.guideresto.business.Restaurant;
+import ch.hearc.ig.guideresto.business.RestaurantType;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.Set;
 
-public class RestaurantMapper extends AbstractMapper {
+public class RestaurantMapper extends AbstractMapper<Restaurant> {
 
     @Override
     public Restaurant findById(int id){
@@ -18,19 +22,20 @@ public class RestaurantMapper extends AbstractMapper {
     }
 
     @Override
-    public IBusinessObject create(IBusinessObject object) {
+    public Restaurant create(Restaurant object) {
         return null;
     }
 
     @Override
-    public boolean update(IBusinessObject object) {
+    public boolean update(Restaurant object) {
         return false;
     }
 
     @Override
-    public boolean delete(IBusinessObject object) {
+    public boolean delete(Restaurant object) {
         return false;
     }
+
 
     @Override
     public boolean deleteById(int id) {
