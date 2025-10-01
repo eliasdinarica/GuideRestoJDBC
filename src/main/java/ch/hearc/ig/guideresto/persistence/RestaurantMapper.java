@@ -204,7 +204,8 @@ public class RestaurantMapper extends AbstractMapper<Restaurant> {
 
     @Override
     public boolean deleteById(int id) {
-        return false;
+        Restaurant rest = findById(id);
+        return this.delete(rest);
     }
 
     @Override
