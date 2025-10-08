@@ -170,7 +170,7 @@ public class RestaurantMapper extends AbstractMapper<Restaurant> {
             s.setInt(6, object.getAddress().getCity().getId());
             s.setInt(7, object.getId());
 
-            int rowsAffected = s.executeUpdate();
+            s.executeUpdate();
             c.commit();
 
             return true;

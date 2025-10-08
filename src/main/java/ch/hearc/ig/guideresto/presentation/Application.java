@@ -1,7 +1,9 @@
 package ch.hearc.ig.guideresto.presentation;
 
 import ch.hearc.ig.guideresto.business.*;
+import ch.hearc.ig.guideresto.persistence.CompleteEvaluationMapper;
 import ch.hearc.ig.guideresto.persistence.FakeItems;
+import ch.hearc.ig.guideresto.persistence.GradeMapper;
 import ch.hearc.ig.guideresto.persistence.RestaurantMapper;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -17,6 +19,9 @@ import java.util.*;
 public class Application {
 
     private static final RestaurantMapper restaurantMapper = new RestaurantMapper();
+    private static final CompleteEvaluationMapper completeEvaluationMapper = new CompleteEvaluationMapper();
+    private static final GradeMapper gradeMapper = new GradeMapper();
+
     private static Scanner scanner;
     private static final Logger logger = LogManager.getLogger(Application.class);
     static RestaurantMapper restMapper = new RestaurantMapper();
@@ -436,6 +441,8 @@ public class Application {
         CompleteEvaluation eval = new CompleteEvaluation(1, new Date(), restaurant, comment, username);
         restaurant.getEvaluations().add(eval);
 
+        completeEvaluationMapper.create(eval);
+
         Grade grade; // L'utilisateur va saisir une note pour chaque critère existant.
         System.out.println("Veuillez svp donner une note entre 1 et 5 pour chacun de ces critères : ");
         for (EvaluationCriteria currentCriteria : FakeItems.getEvaluationCriterias()) {
@@ -443,6 +450,8 @@ public class Application {
             Integer note = readInt();
             grade = new Grade(1, note, eval, currentCriteria);
             eval.getGrades().add(grade);
+
+            gradeMapper.create(grade);
         }
 
         System.out.println("Votre évaluation a bien été enregistrée, merci !");
@@ -511,7 +520,7 @@ public class Application {
         String choice = readString();
         if (choice.equals("o") || choice.equals("O")) {
 
-            //zgeg
+
             restMapper.delete(restaurant);
 
             FakeItems.getAllRestaurants().remove(restaurant);
