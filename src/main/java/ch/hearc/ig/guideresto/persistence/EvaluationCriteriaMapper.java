@@ -1,8 +1,6 @@
 package ch.hearc.ig.guideresto.persistence;
 
-import ch.hearc.ig.guideresto.business.CompleteEvaluation;
 import ch.hearc.ig.guideresto.business.EvaluationCriteria;
-import ch.hearc.ig.guideresto.business.Grade;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -11,18 +9,18 @@ import java.sql.SQLException;
 import java.util.HashSet;
 import java.util.Set;
 
-public class GradeMapper extends AbstractMapper<Grade> {
+public class EvaluationCriteriaMapper extends AbstractMapper<EvaluationCriteria> {
 
     @Override
-    public Grade findById(int id) {
+    public EvaluationCriteria findById(int id) {
         // 1️⃣ Vérifie dans le cache
         if (!isCacheEmpty() && identityMap.containsKey(id)) {
-            logger.debug("Grade {} trouvé dans le cache.", id);
+            logger.debug("EvaluationCriteria {} trouvé dans le cache.", id);
             return identityMap.get(id);
         }
 
         // 2️⃣ Requête SQL
-        String sql = "SELECT * FROM NOTES WHERE NUMERO = ?";
+        String sql = "SELECT * FROM CRITERES_EVALUATION WHERE NUMERO = ?";
         Connection c = ConnectionUtils.getConnection();
 
         try (PreparedStatement s = c.prepareStatement(sql)) {
@@ -31,22 +29,15 @@ public class GradeMapper extends AbstractMapper<Grade> {
             try (ResultSet rs = s.executeQuery()) {
                 if (!rs.next()) return null;
 
-                Grade grade = new Grade();
-                grade.setId(rs.getInt("NUMERO"));
-                grade.setGrade(rs.getInt("NOTE"));
-
-                CompleteEvaluation evaluation = new CompleteEvaluation();
-                evaluation.setId(rs.getInt("FK_COMM"));
-                grade.setEvaluation(evaluation);
-
                 EvaluationCriteria criteria = new EvaluationCriteria();
-                criteria.setId(rs.getInt("FK_CRIT"));
-                grade.setCriteria(criteria);
+                criteria.setId(rs.getInt("NUMERO"));
+                criteria.setName(rs.getString("NOM"));
+                criteria.setDescription(rs.getString("DESCRIPTION"));
 
                 // 3️⃣ Ajouter au cache
-                addToCache(grade);
-                logger.debug("Grade {} ajouté au cache.", id);
-                return grade;
+                addToCache(criteria);
+                logger.debug("EvaluationCriteria {} ajouté au cache.", id);
+                return criteria;
             }
 
         } catch (SQLException ex) {
@@ -56,15 +47,15 @@ public class GradeMapper extends AbstractMapper<Grade> {
     }
 
     @Override
-    public Set<Grade> findAll() {
-        Set<Grade> grades = new HashSet<>();
+    public Set<EvaluationCriteria> findAll() {
+        Set<EvaluationCriteria> criterias = new HashSet<>();
 
         if (!isCacheEmpty()) {
             logger.debug("findAll() : données retournées depuis le cache ({} éléments).", identityMap.size());
             return new HashSet<>(identityMap.values());
         }
 
-        String sql = "SELECT * FROM NOTES";
+        String sql = "SELECT * FROM CRITERES_EVALUATION";
         Connection c = ConnectionUtils.getConnection();
 
         try (PreparedStatement s = c.prepareStatement(sql);
@@ -74,37 +65,30 @@ public class GradeMapper extends AbstractMapper<Grade> {
                 int id = rs.getInt("NUMERO");
 
                 if (identityMap.containsKey(id)) {
-                    grades.add(identityMap.get(id));
+                    criterias.add(identityMap.get(id));
                     continue;
                 }
 
-                Grade grade = new Grade();
-                grade.setId(id);
-                grade.setGrade(rs.getInt("NOTE"));
-
-                CompleteEvaluation evaluation = new CompleteEvaluation();
-                evaluation.setId(rs.getInt("FK_COMM"));
-                grade.setEvaluation(evaluation);
-
                 EvaluationCriteria criteria = new EvaluationCriteria();
-                criteria.setId(rs.getInt("FK_CRIT"));
-                grade.setCriteria(criteria);
+                criteria.setId(id);
+                criteria.setName(rs.getString("NOM"));
+                criteria.setDescription(rs.getString("DESCRIPTION"));
 
-                addToCache(grade);
-                grades.add(grade);
+                addToCache(criteria);
+                criterias.add(criteria);
             }
 
-            logger.debug("findAll() : {} Grades chargés depuis la DB.", grades.size());
+            logger.debug("findAll() : {} EvaluationCriteria chargés depuis la DB.", criterias.size());
 
         } catch (SQLException ex) {
             logger.error("SQLException in findAll(): {}", ex.getMessage(), ex);
         }
 
-        return grades;
+        return criterias;
     }
 
     @Override
-    public Grade create(Grade object) {
+    public EvaluationCriteria create(EvaluationCriteria object) {
         Connection c = ConnectionUtils.getConnection();
         try {
             // 1️⃣ Récupérer la prochaine valeur de la séquence
@@ -112,13 +96,12 @@ public class GradeMapper extends AbstractMapper<Grade> {
             object.setId(nextId);
 
             // 2️⃣ Insérer en base
-            String sql = "INSERT INTO NOTES (NUMERO, NOTE, FK_COMM, FK_CRIT) VALUES (?, ?, ?, ?)";
+            String sql = "INSERT INTO CRITERES_EVALUATION (NUMERO, NOM, DESCRIPTION) VALUES (?, ?, ?)";
 
             try (PreparedStatement s = c.prepareStatement(sql)) {
                 s.setInt(1, object.getId());
-                s.setInt(2, object.getGrade());
-                s.setInt(3, object.getEvaluation().getId());
-                s.setInt(4, object.getCriteria().getId());
+                s.setString(2, object.getName());
+                s.setString(3, object.getDescription());
 
                 s.executeUpdate();
                 c.commit();
@@ -126,7 +109,7 @@ public class GradeMapper extends AbstractMapper<Grade> {
 
             // 3️⃣ Ajouter au cache
             addToCache(object);
-            logger.debug("Grade {} ajouté au cache après création.", object.getId());
+            logger.debug("EvaluationCriteria {} ajouté au cache après création.", object.getId());
 
             return object;
 
@@ -137,23 +120,22 @@ public class GradeMapper extends AbstractMapper<Grade> {
     }
 
     @Override
-    public boolean update(Grade object) {
+    public boolean update(EvaluationCriteria object) {
         Connection c = ConnectionUtils.getConnection();
-        String sql = "UPDATE NOTES " +
-                "SET NOTE = ?, FK_COMM = ?, FK_CRIT = ? " +
+        String sql = "UPDATE CRITERES_EVALUATION " +
+                "SET NOM = ?, DESCRIPTION = ? " +
                 "WHERE NUMERO = ?";
 
         try (PreparedStatement s = c.prepareStatement(sql)) {
-            s.setInt(1, object.getGrade());
-            s.setInt(2, object.getEvaluation().getId());
-            s.setInt(3, object.getCriteria().getId());
-            s.setInt(4, object.getId());
+            s.setString(1, object.getName());
+            s.setString(2, object.getDescription());
+            s.setInt(3, object.getId());
 
             s.executeUpdate();
             c.commit();
 
             addToCache(object);
-            logger.debug("Grade {} mis à jour dans le cache.", object.getId());
+            logger.debug("EvaluationCriteria {} mis à jour dans le cache.", object.getId());
             return true;
 
         } catch (SQLException e) {
@@ -163,9 +145,9 @@ public class GradeMapper extends AbstractMapper<Grade> {
     }
 
     @Override
-    public boolean delete(Grade object) {
+    public boolean delete(EvaluationCriteria object) {
         Connection c = ConnectionUtils.getConnection();
-        String sql = "DELETE FROM NOTES WHERE NUMERO = ?";
+        String sql = "DELETE FROM CRITERES_EVALUATION WHERE NUMERO = ?";
 
         try (PreparedStatement s = c.prepareStatement(sql)) {
             s.setInt(1, object.getId());
@@ -173,7 +155,7 @@ public class GradeMapper extends AbstractMapper<Grade> {
             c.commit();
 
             removeFromCache(object.getId());
-            logger.debug("Grade {} supprimé du cache et de la DB.", object.getId());
+            logger.debug("EvaluationCriteria {} supprimé du cache et de la DB.", object.getId());
             return true;
 
         } catch (SQLException e) {
@@ -184,24 +166,24 @@ public class GradeMapper extends AbstractMapper<Grade> {
 
     @Override
     public boolean deleteById(int id) {
-        Grade grade = findById(id);
-        if (grade == null) return false;
-        return delete(grade);
+        EvaluationCriteria crit = findById(id);
+        if (crit == null) return false;
+        return delete(crit);
     }
 
     @Override
     protected String getSequenceQuery() {
-        // Oracle : renvoie la prochaine valeur de la séquence SEQ_NOTES
-        return "SELECT SEQ_NOTES.NEXTVAL FROM DUAL";
+        // Oracle : renvoie la prochaine valeur de la séquence SEQ_CRITERES_EVALUATION
+        return "SELECT SEQ_CRITERES_EVALUATION.NEXTVAL FROM DUAL";
     }
 
     @Override
     protected String getExistsQuery() {
-        return "SELECT 1 FROM NOTES WHERE NUMERO = ?";
+        return "SELECT 1 FROM CRITERES_EVALUATION WHERE NUMERO = ?";
     }
 
     @Override
     protected String getCountQuery() {
-        return "SELECT COUNT(*) FROM NOTES";
+        return "SELECT COUNT(*) FROM CRITERES_EVALUATION";
     }
 }

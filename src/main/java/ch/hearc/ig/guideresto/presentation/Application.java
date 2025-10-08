@@ -1,10 +1,7 @@
 package ch.hearc.ig.guideresto.presentation;
 
 import ch.hearc.ig.guideresto.business.*;
-import ch.hearc.ig.guideresto.persistence.CompleteEvaluationMapper;
-import ch.hearc.ig.guideresto.persistence.FakeItems;
-import ch.hearc.ig.guideresto.persistence.GradeMapper;
-import ch.hearc.ig.guideresto.persistence.RestaurantMapper;
+import ch.hearc.ig.guideresto.persistence.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -21,6 +18,7 @@ public class Application {
     private static final RestaurantMapper restaurantMapper = new RestaurantMapper();
     private static final CompleteEvaluationMapper completeEvaluationMapper = new CompleteEvaluationMapper();
     private static final GradeMapper gradeMapper = new GradeMapper();
+    private static final BasicEvaluationMapper basicEvaluationMapper = new BasicEvaluationMapper();
 
     private static Scanner scanner;
     private static final Logger logger = LogManager.getLogger(Application.class);
@@ -423,6 +421,9 @@ public class Application {
         }
         BasicEvaluation eval = new BasicEvaluation(1, new Date(), restaurant, like, ipAddress);
         restaurant.getEvaluations().add(eval);
+
+        basicEvaluationMapper.create(eval);
+
         System.out.println("Votre vote a été pris en compte !");
     }
 

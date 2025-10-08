@@ -1,27 +1,23 @@
 package ch.hearc.ig.guideresto.persistence;
 
-import ch.hearc.ig.guideresto.business.CompleteEvaluation;
+import ch.hearc.ig.guideresto.business.BasicEvaluation;
 import ch.hearc.ig.guideresto.business.Restaurant;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.HashSet;
 import java.util.Set;
 
-public class CompleteEvaluationMapper extends AbstractMapper<CompleteEvaluation> {
+public class BasicEvaluationMapper extends AbstractMapper<BasicEvaluation> {
 
     @Override
-    public CompleteEvaluation findById(int id) {
-        // 1️⃣ Vérifie dans le cache
+    public BasicEvaluation findById(int id) {
+        // 🔹 Vérifie dans le cache
         if (!isCacheEmpty() && identityMap.containsKey(id)) {
-            logger.debug("CompleteEvaluation {} trouvée dans le cache.", id);
+            logger.debug("BasicEvaluation {} trouvée dans le cache.", id);
             return identityMap.get(id);
         }
 
-        // 2️⃣ Requête SQL
-        String sql = "SELECT * FROM COMMENTAIRES WHERE NUMERO = ?";
+        String sql = "SELECT * FROM LIKES WHERE NUMERO = ?";
         Connection c = ConnectionUtils.getConnection();
 
         try (PreparedStatement s = c.prepareStatement(sql)) {
@@ -30,38 +26,39 @@ public class CompleteEvaluationMapper extends AbstractMapper<CompleteEvaluation>
             try (ResultSet rs = s.executeQuery()) {
                 if (!rs.next()) return null;
 
-                CompleteEvaluation evaluation = new CompleteEvaluation();
+                BasicEvaluation evaluation = new BasicEvaluation();
                 evaluation.setId(rs.getInt("NUMERO"));
+                evaluation.setLikeRestaurant("T".equalsIgnoreCase(rs.getString("APPRECIATION")));
                 evaluation.setVisitDate(rs.getDate("DATE_EVAL"));
-                evaluation.setComment(rs.getString("COMMENTAIRE"));
-                evaluation.setUsername(rs.getString("NOM_UTILISATEUR"));
+                evaluation.setIpAddress(rs.getString("ADRESSE_IP"));
 
                 Restaurant restaurant = new Restaurant();
                 restaurant.setId(rs.getInt("FK_REST"));
                 evaluation.setRestaurant(restaurant);
 
-                // 3️⃣ Ajouter au cache
                 addToCache(evaluation);
-                logger.debug("CompleteEvaluation {} ajoutée au cache.", id);
+                logger.debug("BasicEvaluation {} ajoutée au cache.", id);
+
                 return evaluation;
             }
 
-        } catch (SQLException ex) {
-            logger.error("SQLException in findById({}): {}", id, ex.getMessage(), ex);
+        } catch (SQLException e) {
+            logger.error("SQLException in findById({}): {}", id, e.getMessage(), e);
             return null;
         }
     }
 
     @Override
-    public Set<CompleteEvaluation> findAll() {
-        Set<CompleteEvaluation> evaluations = new HashSet<>();
+    public Set<BasicEvaluation> findAll() {
+        Set<BasicEvaluation> evaluations = new HashSet<>();
 
+        // 🔹 Retourne le cache s’il est déjà rempli
         if (!isCacheEmpty()) {
-            logger.debug("findAll() : données retournées depuis le cache ({} éléments).", identityMap.size());
+            logger.debug("findAll() : données de BasicEvaluation retournées depuis le cache ({} éléments).", identityMap.size());
             return new HashSet<>(identityMap.values());
         }
 
-        String sql = "SELECT * FROM COMMENTAIRES";
+        String sql = "SELECT * FROM LIKES";
         Connection c = ConnectionUtils.getConnection();
 
         try (PreparedStatement s = c.prepareStatement(sql);
@@ -75,11 +72,11 @@ public class CompleteEvaluationMapper extends AbstractMapper<CompleteEvaluation>
                     continue;
                 }
 
-                CompleteEvaluation evaluation = new CompleteEvaluation();
+                BasicEvaluation evaluation = new BasicEvaluation();
                 evaluation.setId(id);
+                evaluation.setLikeRestaurant("T".equalsIgnoreCase(rs.getString("APPRECIATION")));
                 evaluation.setVisitDate(rs.getDate("DATE_EVAL"));
-                evaluation.setComment(rs.getString("COMMENTAIRE"));
-                evaluation.setUsername(rs.getString("NOM_UTILISATEUR"));
+                evaluation.setIpAddress(rs.getString("ADRESSE_IP"));
 
                 Restaurant restaurant = new Restaurant();
                 restaurant.setId(rs.getInt("FK_REST"));
@@ -89,42 +86,38 @@ public class CompleteEvaluationMapper extends AbstractMapper<CompleteEvaluation>
                 evaluations.add(evaluation);
             }
 
-            logger.debug("findAll() : {} CompleteEvaluations chargées depuis la DB.", evaluations.size());
+            logger.debug("findAll() : {} BasicEvaluations chargées depuis la DB.", evaluations.size());
 
-        } catch (SQLException ex) {
-            logger.error("SQLException in findAll(): {}", ex.getMessage(), ex);
+        } catch (SQLException e) {
+            logger.error("SQLException in findAll(): {}", e.getMessage());
         }
 
         return evaluations;
     }
 
     @Override
-    public CompleteEvaluation create(CompleteEvaluation object) {
+    public BasicEvaluation create(BasicEvaluation object) {
         Connection c = ConnectionUtils.getConnection();
+
         try {
-            // 1️⃣ Récupérer la prochaine valeur de la séquence
+            // 🔹 Récupère la prochaine valeur de la séquence Oracle
             int nextId = getSequenceValue();
             object.setId(nextId);
 
-            // 2️⃣ Insérer en base
-            String sql = "INSERT INTO COMMENTAIRES (NUMERO, DATE_EVAL, COMMENTAIRE, NOM_UTILISATEUR, FK_REST) " +
-                    "VALUES (?, ?, ?, ?, ?)";
-
+            String sql = "INSERT INTO LIKES (NUMERO, APPRECIATION, DATE_EVAL, ADRESSE_IP, FK_REST) VALUES (?, ?, ?, ?, ?)";
             try (PreparedStatement s = c.prepareStatement(sql)) {
                 s.setInt(1, object.getId());
-                s.setDate(2, new java.sql.Date(object.getVisitDate().getTime()));
-                s.setString(3, object.getComment());
-                s.setString(4, object.getUsername());
+                s.setString(2, object.getLikeRestaurant() ? "T" : "F");
+                s.setDate(3, new java.sql.Date(object.getVisitDate().getTime()));
+                s.setString(4, object.getIpAddress());
                 s.setInt(5, object.getRestaurant().getId());
 
                 s.executeUpdate();
                 c.commit();
             }
 
-            // 3️⃣ Ajouter au cache
             addToCache(object);
-            logger.debug("CompleteEvaluation {} ajoutée au cache après création.", object.getId());
-
+            logger.debug("BasicEvaluation {} ajoutée au cache après création.", object.getId());
             return object;
 
         } catch (SQLException e) {
@@ -134,16 +127,16 @@ public class CompleteEvaluationMapper extends AbstractMapper<CompleteEvaluation>
     }
 
     @Override
-    public boolean update(CompleteEvaluation object) {
+    public boolean update(BasicEvaluation object) {
         Connection c = ConnectionUtils.getConnection();
-        String sql = "UPDATE COMMENTAIRES " +
-                "SET DATE_EVAL = ?, COMMENTAIRE = ?, NOM_UTILISATEUR = ?, FK_REST = ? " +
+        String sql = "UPDATE LIKES " +
+                "SET APPRECIATION = ?, DATE_EVAL = ?, ADRESSE_IP = ?, FK_REST = ? " +
                 "WHERE NUMERO = ?";
 
         try (PreparedStatement s = c.prepareStatement(sql)) {
-            s.setDate(1, new java.sql.Date(object.getVisitDate().getTime()));
-            s.setString(2, object.getComment());
-            s.setString(3, object.getUsername());
+            s.setString(1, object.getLikeRestaurant() ? "T" : "F");
+            s.setDate(2, new java.sql.Date(object.getVisitDate().getTime()));
+            s.setString(3, object.getIpAddress());
             s.setInt(4, object.getRestaurant().getId());
             s.setInt(5, object.getId());
 
@@ -151,7 +144,7 @@ public class CompleteEvaluationMapper extends AbstractMapper<CompleteEvaluation>
             c.commit();
 
             addToCache(object);
-            logger.debug("CompleteEvaluation {} mise à jour dans le cache.", object.getId());
+            logger.debug("BasicEvaluation {} mise à jour dans le cache.", object.getId());
             return true;
 
         } catch (SQLException e) {
@@ -161,9 +154,9 @@ public class CompleteEvaluationMapper extends AbstractMapper<CompleteEvaluation>
     }
 
     @Override
-    public boolean delete(CompleteEvaluation object) {
+    public boolean delete(BasicEvaluation object) {
         Connection c = ConnectionUtils.getConnection();
-        String sql = "DELETE FROM COMMENTAIRES WHERE NUMERO = ?";
+        String sql = "DELETE FROM LIKES WHERE NUMERO = ?";
 
         try (PreparedStatement s = c.prepareStatement(sql)) {
             s.setInt(1, object.getId());
@@ -171,35 +164,36 @@ public class CompleteEvaluationMapper extends AbstractMapper<CompleteEvaluation>
             c.commit();
 
             removeFromCache(object.getId());
-            logger.debug("CompleteEvaluation {} supprimée du cache et de la DB.", object.getId());
+            logger.debug("BasicEvaluation {} supprimée du cache et de la DB.", object.getId());
             return true;
 
-        } catch (SQLException ex) {
-            logger.error("SQLException in delete(): {}", ex.getMessage());
+        } catch (SQLException e) {
+            logger.error("SQLException in delete(): {}", e.getMessage());
             return false;
         }
     }
 
     @Override
     public boolean deleteById(int id) {
-        CompleteEvaluation eval = findById(id);
+        BasicEvaluation eval = findById(id);
         if (eval == null) return false;
         return delete(eval);
     }
 
+
     @Override
     protected String getSequenceQuery() {
-        // Oracle : renvoie la prochaine valeur de la séquence SEQ_EVAL
+
         return "SELECT SEQ_EVAL.NEXTVAL FROM DUAL";
     }
 
     @Override
     protected String getExistsQuery() {
-        return "SELECT 1 FROM COMMENTAIRES WHERE NUMERO = ?";
+        return "SELECT 1 FROM LIKES WHERE NUMERO = ?";
     }
 
     @Override
     protected String getCountQuery() {
-        return "SELECT COUNT(*) FROM COMMENTAIRES";
+        return "SELECT COUNT(*) FROM LIKES";
     }
 }
