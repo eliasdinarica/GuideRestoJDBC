@@ -1,23 +1,74 @@
 package ch.hearc.ig.guideresto.persistence;
 
 import ch.hearc.ig.guideresto.business.CompleteEvaluation;
+import ch.hearc.ig.guideresto.business.EvaluationCriteria;
 import ch.hearc.ig.guideresto.business.Grade;
 
-import java.sql.Connection;
-import java.sql.Date;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import java.sql.*;
+import java.util.HashSet;
 import java.util.Set;
 
 public class GradeMapper extends AbstractMapper<Grade> {
     @Override
     public Grade findById(int id) {
+        Connection c = ConnectionUtils.getConnection();
+        String sql = "SELECT * FROM NOTES WHERE ID = ?";
+
+        try (PreparedStatement s = c.prepareStatement(sql)) {
+            s.setInt(1, id);
+
+            ResultSet rs = s.executeQuery();
+            if (rs.next()) {
+                Grade grade = new Grade();
+                grade.setId(rs.getInt("ID"));
+                grade.setGrade(rs.getInt("NOTE"));
+
+                CompleteEvaluation evaluation = new CompleteEvaluation();
+                evaluation.setId(rs.getInt("FK_COMM"));
+                grade.setEvaluation(evaluation);
+
+                EvaluationCriteria criteria = new EvaluationCriteria();
+                criteria.setId(rs.getInt("FK_CRIT"));
+                grade.setCriteria(criteria);
+
+                return grade;
+            }
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+
         return null;
     }
 
     @Override
     public Set<Grade> findAll() {
-        return Set.of();
+        Connection c = ConnectionUtils.getConnection();
+        String sql = "SELECT * FROM NOTES";
+        Set<Grade> grades = new HashSet<>();
+
+        try (PreparedStatement s = c.prepareStatement(sql)) {
+            ResultSet rs = s.executeQuery();
+
+            while (rs.next()) {
+                Grade grade = new Grade();
+                grade.setId(rs.getInt("ID"));
+                grade.setGrade(rs.getInt("NOTE"));
+
+                CompleteEvaluation evaluation = new CompleteEvaluation();
+                evaluation.setId(rs.getInt("FK_COMM"));
+                grade.setEvaluation(evaluation);
+
+                EvaluationCriteria criteria = new EvaluationCriteria();
+                criteria.setId(rs.getInt("FK_CRIT"));
+                grade.setCriteria(criteria);
+
+                grades.add(grade);
+            }
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+
+        return grades;
     }
 
     @Override

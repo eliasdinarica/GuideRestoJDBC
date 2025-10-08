@@ -1,29 +1,29 @@
 package ch.hearc.ig.guideresto.persistence;
 
-import ch.hearc.ig.guideresto.business.CompleteEvaluation;
-import ch.hearc.ig.guideresto.business.EvaluationCriteria;
+import ch.hearc.ig.guideresto.business.BasicEvaluation;
+import ch.hearc.ig.guideresto.business.RestaurantType;
 
 import java.sql.*;
 import java.util.HashSet;
 import java.util.Set;
 
-public class EvalutationCriteriaMapper extends AbstractMapper<EvaluationCriteria> {
+public class RestaurantTypeMapper extends AbstractMapper<RestaurantType> {
     @Override
-    public EvaluationCriteria findById(int id) {
+    public RestaurantType findById(int id) {
         Connection c = ConnectionUtils.getConnection();
-        String sql = "SELECT * FROM CRITERES_EVALUATION WHERE NUMERO = ?";
+        String sql = "SELECT * FROM TYPES_GASTRONOMIQUES WHERE ID = ?";
 
         try (PreparedStatement s = c.prepareStatement(sql)) {
             s.setInt(1, id);
 
             ResultSet rs = s.executeQuery();
             if (rs.next()) {
-                EvaluationCriteria criteria = new EvaluationCriteria();
-                criteria.setId(rs.getInt("NUMERO"));
-                criteria.setName(rs.getString("NOM"));
-                criteria.setDescription(rs.getString("DESCRIPTION"));
+                RestaurantType type = new RestaurantType();
+                type.setId(rs.getInt("ID"));
+                type.setLabel(rs.getString("LIBELLE"));
+                type.setDescription(rs.getString("DESCRIPTION"));
 
-                return criteria;
+                return type;
             }
         } catch (SQLException e) {
             System.out.println(e.getMessage());
@@ -33,38 +33,38 @@ public class EvalutationCriteriaMapper extends AbstractMapper<EvaluationCriteria
     }
 
     @Override
-    public Set<EvaluationCriteria> findAll() {
+    public Set<RestaurantType> findAll() {
         Connection c = ConnectionUtils.getConnection();
-        String sql = "SELECT * FROM CRITERES_EVALUATION";
-        Set<EvaluationCriteria> criterias = new HashSet<>();
+        String sql = "SELECT * FROM TYPES_GASTRONOMIQUES";
+        Set<RestaurantType> types = new HashSet<>();
 
         try (PreparedStatement s = c.prepareStatement(sql)) {
             ResultSet rs = s.executeQuery();
 
             while (rs.next()) {
-                EvaluationCriteria criteria = new EvaluationCriteria();
-                criteria.setId(rs.getInt("NUMERO"));
-                criteria.setName(rs.getString("NOM"));
-                criteria.setDescription(rs.getString("DESCRIPTION"));
+                RestaurantType type = new RestaurantType();
+                type.setId(rs.getInt("ID"));
+                type.setLabel(rs.getString("LIBELLE"));
+                type.setDescription(rs.getString("DESCRIPTION"));
 
-                criterias.add(criteria);
+                types.add(type);
             }
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
 
-        return criterias;
+        return types;
     }
 
     @Override
-    public EvaluationCriteria create(EvaluationCriteria object) {
+    public RestaurantType create(RestaurantType object) {
         Connection c = ConnectionUtils.getConnection();
         try (
                 PreparedStatement s = c.prepareStatement(
-                        "INSERT INTO CRITERES_EVALUATION (NOM, DESCRIPTION) VALUES (?, ?)"
+                        "INSERT INTO TYPES_GASTRONOMIQUES (LIBELLE, DESCRIPTION) VALUES (?, ?)"
                 )
         ) {
-            s.setString(1, object.getName());
+            s.setString(1, object.getLabel());
             s.setString(2, object.getDescription());
 
             s.executeUpdate();
@@ -77,15 +77,16 @@ public class EvalutationCriteriaMapper extends AbstractMapper<EvaluationCriteria
         return object;
     }
 
+
     @Override
-    public boolean update(EvaluationCriteria object) {
+    public boolean update(RestaurantType object) {
         Connection c = ConnectionUtils.getConnection();
-        String sql = "UPDATE CRITERES_EVALUATION " +
-                "SET NOM = ?, DESCRIPTION = ? " +
-                "WHERE NUMERO = ?";
+        String sql = "UPDATE TYPES_GASTRONOMIQUES " +
+                "SET LIBELLE = ?, DESCRIPTION = ? " +
+                "WHERE ID = ?";
 
         try (PreparedStatement s = c.prepareStatement(sql)) {
-            s.setString(1, object.getName());
+            s.setString(1, object.getLabel());
             s.setString(2, object.getDescription());
             s.setInt(3, object.getId());
 
@@ -103,9 +104,9 @@ public class EvalutationCriteriaMapper extends AbstractMapper<EvaluationCriteria
 
 
     @Override
-    public boolean delete(EvaluationCriteria object) {
+    public boolean delete(RestaurantType object) {
         Connection c = ConnectionUtils.getConnection();
-        String sql = "DELETE FROM CRITERES_EVALUATION WHERE NUMERO = ?";
+        String sql = "DELETE FROM TYPES_GASTRONOMIQUES WHERE ID = ?";
 
         try (PreparedStatement s = c.prepareStatement(sql)) {
             s.setInt(1, object.getId());
@@ -123,21 +124,10 @@ public class EvalutationCriteriaMapper extends AbstractMapper<EvaluationCriteria
 
     @Override
     public boolean deleteById(int id) {
-        Connection c = ConnectionUtils.getConnection();
-        String sql = "DELETE FROM CRITERES_EVALUATION WHERE NUMERO = ?";
-
-        try (PreparedStatement s = c.prepareStatement(sql)) {
-            s.setInt(1, id);
-
-            s.executeUpdate();
-            c.commit();
-
-            return true;
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-            return false;
-        }
+        RestaurantType type = findById(id);
+        return this.delete(type);
     }
+
 
     @Override
     protected String getSequenceQuery() {
