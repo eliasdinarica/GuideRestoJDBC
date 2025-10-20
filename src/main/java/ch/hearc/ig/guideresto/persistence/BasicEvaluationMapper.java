@@ -203,4 +203,31 @@ public class BasicEvaluationMapper extends AbstractMapper<BasicEvaluation> {
     protected String getCountQuery() {
         return "SELECT COUNT(*) FROM LIKES";
     }
+
+    public Set<BasicEvaluation> findByRestaurant(Restaurant restaurant) {
+        Set<BasicEvaluation> evaluations = new HashSet<>();
+        String sql = "SELECT * FROM LIKES WHERE FK_REST = ?";
+        Connection c = ConnectionUtils.getConnection();
+
+        try (PreparedStatement s = c.prepareStatement(sql)) {
+            s.setInt(1, restaurant.getId());
+            try (ResultSet rs = s.executeQuery()) {
+                while (rs.next()) {
+                    BasicEvaluation evaluation = new BasicEvaluation();
+                    evaluation.setId(rs.getInt("NUMERO"));
+                    evaluation.setLikeRestaurant("T".equalsIgnoreCase(rs.getString("APPRECIATION")));
+                    evaluation.setVisitDate(rs.getDate("DATE_EVAL"));
+                    evaluation.setIpAddress(rs.getString("ADRESSE_IP"));
+                    evaluation.setRestaurant(restaurant);
+
+                    evaluations.add(evaluation);
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException in findByRestaurant(): {}", e.getMessage());
+        }
+
+        return evaluations;
+    }
+
 }

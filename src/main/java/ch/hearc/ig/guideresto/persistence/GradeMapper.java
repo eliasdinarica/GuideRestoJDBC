@@ -206,4 +206,28 @@ public class GradeMapper extends AbstractMapper<Grade> {
     protected String getCountQuery() {
         return "SELECT COUNT(*) FROM NOTES";
     }
+
+    public Set<Grade> findByEvaluation(CompleteEvaluation evaluation) {
+        Set<Grade> grades = new HashSet<>();
+        String sql = "SELECT * FROM NOTES WHERE FK_COMM = ?";
+        Connection c = ConnectionUtils.getConnection();
+
+        try (PreparedStatement s = c.prepareStatement(sql)) {
+            s.setInt(1, evaluation.getId());
+            try (ResultSet rs = s.executeQuery()) {
+                while (rs.next()) {
+                    Grade grade = new Grade();
+                    grade.setId(rs.getInt("NUMERO"));
+                    grade.setGrade(rs.getInt("NOTE"));
+                    grade.setEvaluation(evaluation);
+                    // ⚠ ici tu peux recharger le critère via EvaluationCriteriaMapper si besoin
+                    grades.add(grade);
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException in findByEvaluation(): {}", e.getMessage());
+        }
+
+        return grades;
+    }
 }
