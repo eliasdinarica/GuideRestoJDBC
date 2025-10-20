@@ -6,20 +6,27 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 public class EvaluationCriteriaMapper extends AbstractMapper<EvaluationCriteria> {
 
+    protected static final Map<Integer, EvaluationCriteria> identityMap = new HashMap<>();
+
+    @Override
+    protected Map<Integer, EvaluationCriteria> getIdentityMap() {
+        return identityMap;
+    }
+
     @Override
     public EvaluationCriteria findById(int id) {
-        // 1️⃣ Vérifie dans le cache
         if (!isCacheEmpty() && identityMap.containsKey(id)) {
             logger.debug("EvaluationCriteria {} trouvé dans le cache.", id);
             return identityMap.get(id);
         }
 
-        // 2️⃣ Requête SQL
         String sql = "SELECT * FROM CRITERES_EVALUATION WHERE NUMERO = ?";
         Connection c = ConnectionUtils.getConnection();
 
@@ -34,7 +41,6 @@ public class EvaluationCriteriaMapper extends AbstractMapper<EvaluationCriteria>
                 criteria.setName(rs.getString("NOM"));
                 criteria.setDescription(rs.getString("DESCRIPTION"));
 
-                // 3️⃣ Ajouter au cache
                 addToCache(criteria);
                 logger.debug("EvaluationCriteria {} ajouté au cache.", id);
                 return criteria;
@@ -91,11 +97,9 @@ public class EvaluationCriteriaMapper extends AbstractMapper<EvaluationCriteria>
     public EvaluationCriteria create(EvaluationCriteria object) {
         Connection c = ConnectionUtils.getConnection();
         try {
-            // 1️⃣ Récupérer la prochaine valeur de la séquence
             int nextId = getSequenceValue();
             object.setId(nextId);
 
-            // 2️⃣ Insérer en base
             String sql = "INSERT INTO CRITERES_EVALUATION (NUMERO, NOM, DESCRIPTION) VALUES (?, ?, ?)";
 
             try (PreparedStatement s = c.prepareStatement(sql)) {
@@ -107,7 +111,6 @@ public class EvaluationCriteriaMapper extends AbstractMapper<EvaluationCriteria>
                 c.commit();
             }
 
-            // 3️⃣ Ajouter au cache
             addToCache(object);
             logger.debug("EvaluationCriteria {} ajouté au cache après création.", object.getId());
 
@@ -173,7 +176,6 @@ public class EvaluationCriteriaMapper extends AbstractMapper<EvaluationCriteria>
 
     @Override
     protected String getSequenceQuery() {
-        // Oracle : renvoie la prochaine valeur de la séquence SEQ_CRITERES_EVALUATION
         return "SELECT SEQ_CRITERES_EVALUATION.NEXTVAL FROM DUAL";
     }
 

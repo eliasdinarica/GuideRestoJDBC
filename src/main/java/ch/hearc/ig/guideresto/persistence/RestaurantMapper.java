@@ -8,10 +8,19 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 public class RestaurantMapper extends AbstractMapper<Restaurant> {
+
+    protected static final Map<Integer, Restaurant> identityMap = new HashMap<>();
+
+    @Override
+    protected Map<Integer, Restaurant> getIdentityMap() {
+        return identityMap;
+    }
 
     @Override
     public Restaurant findById(int id) {
@@ -245,7 +254,6 @@ public class RestaurantMapper extends AbstractMapper<Restaurant> {
         if (rest == null) return false;
         return delete(rest);
     }
-
 
     @Override
     protected String getSequenceQuery() {

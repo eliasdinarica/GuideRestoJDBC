@@ -7,20 +7,27 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 public class CompleteEvaluationMapper extends AbstractMapper<CompleteEvaluation> {
 
+    protected static final Map<Integer, CompleteEvaluation> identityMap = new HashMap<>();
+
+    @Override
+    protected Map<Integer, CompleteEvaluation> getIdentityMap() {
+        return identityMap;
+    }
+
     @Override
     public CompleteEvaluation findById(int id) {
-        // 1️⃣ Vérifie dans le cache
         if (!isCacheEmpty() && identityMap.containsKey(id)) {
             logger.debug("CompleteEvaluation {} trouvée dans le cache.", id);
             return identityMap.get(id);
         }
 
-        // 2️⃣ Requête SQL
         String sql = "SELECT * FROM COMMENTAIRES WHERE NUMERO = ?";
         Connection c = ConnectionUtils.getConnection();
 
@@ -40,7 +47,6 @@ public class CompleteEvaluationMapper extends AbstractMapper<CompleteEvaluation>
                 restaurant.setId(rs.getInt("FK_REST"));
                 evaluation.setRestaurant(restaurant);
 
-                // 3️⃣ Ajouter au cache
                 addToCache(evaluation);
                 logger.debug("CompleteEvaluation {} ajoutée au cache.", id);
                 return evaluation;
@@ -102,11 +108,9 @@ public class CompleteEvaluationMapper extends AbstractMapper<CompleteEvaluation>
     public CompleteEvaluation create(CompleteEvaluation object) {
         Connection c = ConnectionUtils.getConnection();
         try {
-            // 1️⃣ Récupérer la prochaine valeur de la séquence
             int nextId = getSequenceValue();
             object.setId(nextId);
 
-            // 2️⃣ Insérer en base
             String sql = "INSERT INTO COMMENTAIRES (NUMERO, DATE_EVAL, COMMENTAIRE, NOM_UTILISATEUR, FK_REST) " +
                     "VALUES (?, ?, ?, ?, ?)";
 
@@ -121,7 +125,6 @@ public class CompleteEvaluationMapper extends AbstractMapper<CompleteEvaluation>
                 c.commit();
             }
 
-            // 3️⃣ Ajouter au cache
             addToCache(object);
             logger.debug("CompleteEvaluation {} ajoutée au cache après création.", object.getId());
 
@@ -189,7 +192,6 @@ public class CompleteEvaluationMapper extends AbstractMapper<CompleteEvaluation>
 
     @Override
     protected String getSequenceQuery() {
-        // Oracle : renvoie la prochaine valeur de la séquence SEQ_EVAL
         return "SELECT SEQ_EVAL.NEXTVAL FROM DUAL";
     }
 

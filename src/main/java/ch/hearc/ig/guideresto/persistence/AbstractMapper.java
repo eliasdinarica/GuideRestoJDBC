@@ -15,7 +15,7 @@ import java.util.Set;
 public abstract class AbstractMapper<T extends IBusinessObject> {
 
     protected static final Logger logger = LogManager.getLogger();
-    protected Map<Integer, T> identityMap = new HashMap<>();
+    protected abstract Map<Integer, T> getIdentityMap();
     public abstract T findById(int id);
     public abstract Set<T> findAll();
     public abstract T create(T object);
@@ -89,33 +89,31 @@ public abstract class AbstractMapper<T extends IBusinessObject> {
     }
 
     /**
-     * Vérifie si le cache est actuellement vide
-     * @return true si le cache ne contient aucun objet, false sinon
+     * Vérifie si le cache est actuellement vide.
      */
     protected boolean isCacheEmpty() {
-        return identityMap.isEmpty();
+        return getIdentityMap().isEmpty();
     }
 
     /**
-     * Vide le cache
+     * Vide le cache.
      */
     protected void resetCache() {
-        identityMap.clear();
+        getIdentityMap().clear();
     }
 
     /**
-     * Ajoute un objet au cache
-     * @param objet l'objet à ajouter
+     * Ajoute un objet au cache.
      */
-    protected void addToCache(T objet) {
-        identityMap.put(objet.getId(), objet);
+    protected void addToCache(T object) {
+        if (object == null) return;
+        getIdentityMap().put(object.getId(), object);
     }
 
     /**
-     * Retire un objet du cache
-     * @param id l'ID de l'objet à retirer du cache
+     * Retire un objet du cache.
      */
     protected void removeFromCache(Integer id) {
-        identityMap.remove(id);
+        getIdentityMap().remove(id);
     }
 }

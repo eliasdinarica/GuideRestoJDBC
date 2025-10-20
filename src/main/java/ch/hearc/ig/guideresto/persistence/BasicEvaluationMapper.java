@@ -4,10 +4,19 @@ import ch.hearc.ig.guideresto.business.BasicEvaluation;
 import ch.hearc.ig.guideresto.business.Restaurant;
 
 import java.sql.*;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 public class BasicEvaluationMapper extends AbstractMapper<BasicEvaluation> {
+
+    protected static final Map<Integer, BasicEvaluation> identityMap = new HashMap<>();
+
+    @Override
+    protected Map<Integer, BasicEvaluation> getIdentityMap() {
+        return identityMap;
+    }
 
     @Override
     public BasicEvaluation findById(int id) {
@@ -180,10 +189,8 @@ public class BasicEvaluationMapper extends AbstractMapper<BasicEvaluation> {
         return delete(eval);
     }
 
-
     @Override
     protected String getSequenceQuery() {
-
         return "SELECT SEQ_EVAL.NEXTVAL FROM DUAL";
     }
 
