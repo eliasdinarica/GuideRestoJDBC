@@ -65,10 +65,7 @@ public class GradeMapper extends AbstractMapper<Grade> {
     public Set<Grade> findAll() {
         Set<Grade> grades = new HashSet<>();
 
-        if (!isCacheEmpty()) {
-            logger.debug("findAll() : données retournées depuis le cache ({} éléments).", identityMap.size());
-            return new HashSet<>(identityMap.values());
-        }
+        resetCache();
 
         String sql = "SELECT * FROM NOTES";
         Connection c = ConnectionUtils.getConnection();
@@ -77,15 +74,8 @@ public class GradeMapper extends AbstractMapper<Grade> {
              ResultSet rs = s.executeQuery()) {
 
             while (rs.next()) {
-                int id = rs.getInt("NUMERO");
-
-                if (identityMap.containsKey(id)) {
-                    grades.add(identityMap.get(id));
-                    continue;
-                }
-
                 Grade grade = new Grade();
-                grade.setId(id);
+                grade.setId(rs.getInt("NUMERO"));
                 grade.setGrade(rs.getInt("NOTE"));
 
                 CompleteEvaluation evaluation = new CompleteEvaluation();
@@ -220,7 +210,12 @@ public class GradeMapper extends AbstractMapper<Grade> {
                     grade.setId(rs.getInt("NUMERO"));
                     grade.setGrade(rs.getInt("NOTE"));
                     grade.setEvaluation(evaluation);
-                    // ⚠ ici tu peux recharger le critère via EvaluationCriteriaMapper si besoin
+
+                    EvaluationCriteria criteria = new EvaluationCriteria();
+                    criteria.setId(rs.getInt("FK_CRIT"));
+                    grade.setCriteria(criteria);
+
+                    addToCache(grade);
                     grades.add(grade);
                 }
             }
@@ -230,4 +225,41 @@ public class GradeMapper extends AbstractMapper<Grade> {
 
         return grades;
     }
+
+    public Set<Grade> findByCriteria(EvaluationCriteria criteria) {
+        Set<Grade> grades = new HashSet<>();
+        String sql = "SELECT * FROM NOTES WHERE FK_CRIT = ?";
+        Connection c = ConnectionUtils.getConnection();
+
+        try (PreparedStatement s = c.prepareStatement(sql)) {
+            s.setInt(1, criteria.getId());
+            try (ResultSet rs = s.executeQuery()) {
+                while (rs.next()) {
+                    Grade grade = new Grade();
+                    grade.setId(rs.getInt("NUMERO"));
+                    grade.setGrade(rs.getInt("NOTE"));
+
+                    // 🔹 Récupération propre de l’évaluation liée
+                    int evalId = rs.getInt("FK_EVAL");
+                    CompleteEvaluation eval = CompleteEvaluationMapper.identityMap.get(evalId);
+                    if (eval == null) {
+                        eval = new CompleteEvaluation();
+                        eval.setId(evalId); // proxy léger, pas besoin de charger tout
+                    }
+                    grade.setEvaluation(eval);
+
+                    // 🔹 Critère déjà connu (celui passé en paramètre)
+                    grade.setCriteria(criteria);
+
+                    addToCache(grade);
+                    grades.add(grade);
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException in findByCriteria(): {}", e.getMessage());
+        }
+
+        return grades;
+    }
+
 }

@@ -4,21 +4,21 @@ import ch.hearc.ig.guideresto.business.CompleteEvaluation;
 import ch.hearc.ig.guideresto.business.EvaluationCriteria;
 import ch.hearc.ig.guideresto.business.Grade;
 import ch.hearc.ig.guideresto.persistence.GradeMapper;
+import ch.hearc.ig.guideresto.persistence.EvaluationCriteriaMapper;
+import ch.hearc.ig.guideresto.persistence.CompleteEvaluationMapper;
 
 import java.util.Set;
 
 /**
  * Service pour la gestion des notes (grades).
- * Sert de couche intermédiaire entre la présentation et la persistance.
- * Aucune transaction complexe ici : le mapper gère les commits individuellement.
+ * Implémente un lazy loading du critère et de l’évaluation associés.
  */
 public class GradeService {
 
     private final GradeMapper gradeMapper = new GradeMapper();
+    private final CompleteEvaluationMapper evaluationMapper = new CompleteEvaluationMapper();
+    private final EvaluationCriteriaMapper criteriaMapper = new EvaluationCriteriaMapper();
 
-    /**
-     * Crée une nouvelle note (grade) associée à une évaluation complète et un critère.
-     */
     public Grade createGrade(int value, CompleteEvaluation evaluation, EvaluationCriteria criteria) {
         Grade grade = new Grade();
         grade.setGrade(value);
@@ -27,45 +27,53 @@ public class GradeService {
         return gradeMapper.create(grade);
     }
 
-    /**
-     * Récupère toutes les notes présentes en base.
-     */
     public Set<Grade> findAll() {
         return gradeMapper.findAll();
     }
 
-    /**
-     * Récupère une note par son identifiant.
-     */
     public Grade findById(int id) {
         return gradeMapper.findById(id);
     }
 
-    /**
-     * Récupère toutes les notes associées à une évaluation complète.
-     */
     public Set<Grade> findByEvaluation(CompleteEvaluation evaluation) {
         return gradeMapper.findByEvaluation(evaluation);
     }
 
-    /**
-     * Met à jour une note existante.
-     */
+    public Set<Grade> findByCriteria(EvaluationCriteria criteria) {
+        return gradeMapper.findByCriteria(criteria);
+    }
+
     public boolean updateGrade(Grade grade) {
         return gradeMapper.update(grade);
     }
 
-    /**
-     * Supprime une note.
-     */
     public boolean deleteGrade(Grade grade) {
         return gradeMapper.delete(grade);
     }
 
-    /**
-     * Supprime une note par son identifiant.
-     */
     public boolean deleteById(int id) {
         return gradeMapper.deleteById(id);
+    }
+
+    /**
+     * Lazy loading de l’évaluation complète associée.
+     */
+    public CompleteEvaluation loadEvaluation(Grade grade) {
+        if (grade.getEvaluation() == null || grade.getEvaluation().getUsername() == null) {
+            CompleteEvaluation eval = evaluationMapper.findById(grade.getEvaluation().getId());
+            grade.setEvaluation(eval);
+        }
+        return grade.getEvaluation();
+    }
+
+    /**
+     * Lazy loading du critère associé.
+     */
+    public EvaluationCriteria loadCriteria(Grade grade) {
+        if (grade.getCriteria() == null || grade.getCriteria().getName() == null) {
+            EvaluationCriteria criteria = criteriaMapper.findById(grade.getCriteria().getId());
+            grade.setCriteria(criteria);
+        }
+        return grade.getCriteria();
     }
 }

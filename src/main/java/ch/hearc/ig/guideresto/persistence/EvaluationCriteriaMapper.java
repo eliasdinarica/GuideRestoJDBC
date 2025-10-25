@@ -56,10 +56,7 @@ public class EvaluationCriteriaMapper extends AbstractMapper<EvaluationCriteria>
     public Set<EvaluationCriteria> findAll() {
         Set<EvaluationCriteria> criterias = new HashSet<>();
 
-        if (!isCacheEmpty()) {
-            logger.debug("findAll() : données retournées depuis le cache ({} éléments).", identityMap.size());
-            return new HashSet<>(identityMap.values());
-        }
+        resetCache();
 
         String sql = "SELECT * FROM CRITERES_EVALUATION";
         Connection c = ConnectionUtils.getConnection();
@@ -68,15 +65,8 @@ public class EvaluationCriteriaMapper extends AbstractMapper<EvaluationCriteria>
              ResultSet rs = s.executeQuery()) {
 
             while (rs.next()) {
-                int id = rs.getInt("NUMERO");
-
-                if (identityMap.containsKey(id)) {
-                    criterias.add(identityMap.get(id));
-                    continue;
-                }
-
                 EvaluationCriteria criteria = new EvaluationCriteria();
-                criteria.setId(id);
+                criteria.setId(rs.getInt("NUMERO"));
                 criteria.setName(rs.getString("NOM"));
                 criteria.setDescription(rs.getString("DESCRIPTION"));
 
@@ -173,6 +163,7 @@ public class EvaluationCriteriaMapper extends AbstractMapper<EvaluationCriteria>
         if (crit == null) return false;
         return delete(crit);
     }
+
 
     @Override
     protected String getSequenceQuery() {

@@ -24,13 +24,11 @@ public class RestaurantMapper extends AbstractMapper<Restaurant> {
 
     @Override
     public Restaurant findById(int id) {
-        // 1️⃣ Vérifie dans le cache
         if (!isCacheEmpty() && identityMap.containsKey(id)) {
             logger.debug("Restaurant {} trouvé dans le cache.", id);
             return identityMap.get(id);
         }
 
-        // 2️⃣ Requête SQL
         String sql =
                 "SELECT r.numero          AS r_id, " +
                         "       r.nom             AS r_nom, " +
@@ -93,10 +91,7 @@ public class RestaurantMapper extends AbstractMapper<Restaurant> {
     public Set<Restaurant> findAll() {
         Set<Restaurant> restaurants = new HashSet<>();
 
-        if (!isCacheEmpty()) {
-            logger.debug("findAll() : données retournées depuis le cache ({} éléments).", identityMap.size());
-            return new HashSet<>(identityMap.values());
-        }
+        resetCache();
 
         String sql =
                 "SELECT r.numero          AS r_id, " +
@@ -120,13 +115,6 @@ public class RestaurantMapper extends AbstractMapper<Restaurant> {
              ResultSet rs = stmt.executeQuery()) {
 
             while (rs.next()) {
-                int id = rs.getInt("r_id");
-
-                if (identityMap.containsKey(id)) {
-                    restaurants.add(identityMap.get(id));
-                    continue;
-                }
-
                 City city = new City(
                         rs.getInt("v_id"),
                         rs.getString("v_name"),
@@ -140,7 +128,7 @@ public class RestaurantMapper extends AbstractMapper<Restaurant> {
                 );
 
                 Restaurant restaurant = new Restaurant(
-                        id,
+                        rs.getInt("r_id"),
                         rs.getString("r_nom"),
                         rs.getString("r_desc"),
                         rs.getString("r_site"),
@@ -166,11 +154,9 @@ public class RestaurantMapper extends AbstractMapper<Restaurant> {
     public Restaurant create(Restaurant object) {
         Connection c = ConnectionUtils.getConnection();
         try {
-            // 1️⃣ Récupérer la prochaine valeur de la séquence
             int nextId = getSequenceValue();
             object.setId(nextId);
 
-            // 2️⃣ Insérer en base
             String sql = "INSERT INTO RESTAURANTS (NUMERO, NOM, ADRESSE, DESCRIPTION, SITE_WEB, FK_TYPE, FK_VILL) " +
                     "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
@@ -187,7 +173,6 @@ public class RestaurantMapper extends AbstractMapper<Restaurant> {
                 c.commit();
             }
 
-            // 3️⃣ Ajouter au cache
             addToCache(object);
             logger.debug("Restaurant {} ajouté au cache après création.", object.getId());
 
@@ -257,7 +242,6 @@ public class RestaurantMapper extends AbstractMapper<Restaurant> {
 
     @Override
     protected String getSequenceQuery() {
-        // Oracle : renvoie la prochaine valeur de la séquence SEQ_RESTAURANTS
         return "SELECT SEQ_RESTAURANTS.NEXTVAL FROM DUAL";
     }
 

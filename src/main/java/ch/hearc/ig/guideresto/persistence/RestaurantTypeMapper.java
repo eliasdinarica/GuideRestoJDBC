@@ -56,10 +56,7 @@ public class RestaurantTypeMapper extends AbstractMapper<RestaurantType> {
     public Set<RestaurantType> findAll() {
         Set<RestaurantType> types = new HashSet<>();
 
-        if (!isCacheEmpty()) {
-            logger.debug("findAll() : données retournées depuis le cache ({} éléments).", identityMap.size());
-            return new HashSet<>(identityMap.values());
-        }
+        resetCache();
 
         String sql = "SELECT * FROM TYPES_GASTRONOMIQUES";
         Connection c = ConnectionUtils.getConnection();
@@ -68,15 +65,8 @@ public class RestaurantTypeMapper extends AbstractMapper<RestaurantType> {
              ResultSet rs = s.executeQuery()) {
 
             while (rs.next()) {
-                int id = rs.getInt("NUMERO");
-
-                if (identityMap.containsKey(id)) {
-                    types.add(identityMap.get(id));
-                    continue;
-                }
-
                 RestaurantType type = new RestaurantType();
-                type.setId(id);
+                type.setId(rs.getInt("NUMERO"));
                 type.setLabel(rs.getString("LIBELLE"));
                 type.setDescription(rs.getString("DESCRIPTION"));
 

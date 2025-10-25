@@ -20,7 +20,6 @@ public class BasicEvaluationMapper extends AbstractMapper<BasicEvaluation> {
 
     @Override
     public BasicEvaluation findById(int id) {
-        // 🔹 Vérifie dans le cache
         if (!isCacheEmpty() && identityMap.containsKey(id)) {
             logger.debug("BasicEvaluation {} trouvée dans le cache.", id);
             return identityMap.get(id);
@@ -61,11 +60,7 @@ public class BasicEvaluationMapper extends AbstractMapper<BasicEvaluation> {
     public Set<BasicEvaluation> findAll() {
         Set<BasicEvaluation> evaluations = new HashSet<>();
 
-        // 🔹 Retourne le cache s’il est déjà rempli
-        if (!isCacheEmpty()) {
-            logger.debug("findAll() : données de BasicEvaluation retournées depuis le cache ({} éléments).", identityMap.size());
-            return new HashSet<>(identityMap.values());
-        }
+        resetCache();
 
         String sql = "SELECT * FROM LIKES";
         Connection c = ConnectionUtils.getConnection();
@@ -74,15 +69,8 @@ public class BasicEvaluationMapper extends AbstractMapper<BasicEvaluation> {
              ResultSet rs = s.executeQuery()) {
 
             while (rs.next()) {
-                int id = rs.getInt("NUMERO");
-
-                if (identityMap.containsKey(id)) {
-                    evaluations.add(identityMap.get(id));
-                    continue;
-                }
-
                 BasicEvaluation evaluation = new BasicEvaluation();
-                evaluation.setId(id);
+                evaluation.setId(rs.getInt("NUMERO"));
                 evaluation.setLikeRestaurant("T".equalsIgnoreCase(rs.getString("APPRECIATION")));
                 evaluation.setVisitDate(rs.getDate("DATE_EVAL"));
                 evaluation.setIpAddress(rs.getString("ADRESSE_IP"));
@@ -109,7 +97,6 @@ public class BasicEvaluationMapper extends AbstractMapper<BasicEvaluation> {
         Connection c = ConnectionUtils.getConnection();
 
         try {
-            // 🔹 Récupère la prochaine valeur de la séquence Oracle
             int nextId = getSequenceValue();
             object.setId(nextId);
 
@@ -220,6 +207,7 @@ public class BasicEvaluationMapper extends AbstractMapper<BasicEvaluation> {
                     evaluation.setIpAddress(rs.getString("ADRESSE_IP"));
                     evaluation.setRestaurant(restaurant);
 
+                    addToCache(evaluation);
                     evaluations.add(evaluation);
                 }
             }
@@ -229,5 +217,4 @@ public class BasicEvaluationMapper extends AbstractMapper<BasicEvaluation> {
 
         return evaluations;
     }
-
 }

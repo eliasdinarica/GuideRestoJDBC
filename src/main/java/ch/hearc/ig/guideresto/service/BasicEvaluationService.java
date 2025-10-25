@@ -1,6 +1,7 @@
 package ch.hearc.ig.guideresto.service;
 
 import ch.hearc.ig.guideresto.business.BasicEvaluation;
+import ch.hearc.ig.guideresto.business.CompleteEvaluation;
 import ch.hearc.ig.guideresto.business.Restaurant;
 import ch.hearc.ig.guideresto.persistence.BasicEvaluationMapper;
 
@@ -28,13 +29,7 @@ public class BasicEvaluationService {
     }
 
     public Set<BasicEvaluation> findByRestaurant(Restaurant restaurant) {
-        Set<BasicEvaluation> result = new HashSet<>();
-        for (BasicEvaluation eval : basicEvaluationMapper.findAll()) {
-            if (eval.getRestaurant() != null && eval.getRestaurant().getId() == restaurant.getId()) {
-                result.add(eval);
-            }
-        }
-        return result;
+        return basicEvaluationMapper.findByRestaurant(restaurant);
     }
 
     public void deleteBasicEvaluation(BasicEvaluation evaluation) {

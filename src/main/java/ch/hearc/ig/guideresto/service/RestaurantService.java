@@ -3,10 +3,12 @@ package ch.hearc.ig.guideresto.service;
 import ch.hearc.ig.guideresto.business.Restaurant;
 import ch.hearc.ig.guideresto.business.BasicEvaluation;
 import ch.hearc.ig.guideresto.business.CompleteEvaluation;
+import ch.hearc.ig.guideresto.business.Evaluation;
 import ch.hearc.ig.guideresto.persistence.RestaurantMapper;
 import ch.hearc.ig.guideresto.persistence.BasicEvaluationMapper;
 import ch.hearc.ig.guideresto.persistence.CompleteEvaluationMapper;
 
+import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -22,58 +24,34 @@ public class RestaurantService {
     private final CompleteEvaluationMapper completeEvaluationMapper = new CompleteEvaluationMapper();
     private final CompleteEvaluationService completeEvaluationService = new CompleteEvaluationService();
 
-    /**
-     * Crée un nouveau restaurant.
-     */
     public Restaurant createRestaurant(Restaurant restaurant) {
         return restaurantMapper.create(restaurant);
     }
 
-    /**
-     * Récupère tous les restaurants.
-     */
     public Set<Restaurant> findAll() {
         return restaurantMapper.findAll();
     }
 
-    /**
-     * Récupère un restaurant par son identifiant.
-     */
     public Restaurant findById(int id) {
         return restaurantMapper.findById(id);
     }
 
-    /**
-     * Met à jour un restaurant.
-     */
     public boolean updateRestaurant(Restaurant restaurant) {
         return restaurantMapper.update(restaurant);
     }
 
-    /**
-     * Supprime un restaurant et toutes ses évaluations associées.
-     * ⚠️ Ne supprime pas les notes — elles sont supprimées par CompleteEvaluationService.
-     */
     public boolean deleteRestaurant(Restaurant restaurant) {
         try {
-            // 🔹 Supprimer les évaluations basiques associées
-            Set<BasicEvaluation> basicEvaluations = basicEvaluationMapper.findAll();
+            Set<BasicEvaluation> basicEvaluations = basicEvaluationMapper.findByRestaurant(restaurant);
             for (BasicEvaluation eval : basicEvaluations) {
-                if (eval.getRestaurant() != null && eval.getRestaurant().getId() == restaurant.getId()) {
-                    basicEvaluationMapper.delete(eval);
-                }
+                basicEvaluationMapper.delete(eval);
             }
 
-            // 🔹 Supprimer les évaluations complètes associées
-            Set<CompleteEvaluation> completeEvaluations = completeEvaluationMapper.findAll();
+            Set<CompleteEvaluation> completeEvaluations = completeEvaluationMapper.findByRestaurant(restaurant);
             for (CompleteEvaluation eval : completeEvaluations) {
-                if (eval.getRestaurant() != null && eval.getRestaurant().getId() == restaurant.getId()) {
-                    // délégation au service pour gérer les notes liées
-                    completeEvaluationService.deleteCompleteEvaluation(eval);
-                }
+                completeEvaluationService.deleteCompleteEvaluation(eval);
             }
 
-            // 🔹 Supprimer le restaurant lui-même
             return restaurantMapper.delete(restaurant);
 
         } catch (Exception e) {
@@ -82,12 +60,32 @@ public class RestaurantService {
         }
     }
 
-    /**
-     * Supprime un restaurant par son identifiant.
-     */
     public boolean deleteById(int id) {
         Restaurant restaurant = restaurantMapper.findById(id);
         if (restaurant == null) return false;
         return deleteRestaurant(restaurant);
     }
+
+    /**
+     * Charge les évaluations (basiques et complètes) associées à un restaurant.
+     */
+    public void loadEvaluations(Restaurant restaurant) {
+        if (restaurant == null) return;
+
+        if (restaurant.getEvaluations() == null || restaurant.getEvaluations().isEmpty()) {
+            Set<Evaluation> evaluations = new HashSet<>();
+            evaluations.addAll(basicEvaluationMapper.findByRestaurant(restaurant));
+            evaluations.addAll(completeEvaluationMapper.findByRestaurant(restaurant));
+            restaurant.setEvaluations(evaluations);
+        }
+
+
+            for (Evaluation e : restaurant.getEvaluations()) {
+                if (e instanceof CompleteEvaluation completeEval) {
+                    completeEvaluationService.loadGrades(completeEval);
+                }
+            }
+
+    }
+
 }

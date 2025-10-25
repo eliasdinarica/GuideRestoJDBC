@@ -54,10 +54,7 @@ public class CityMapper extends AbstractMapper<City> {
     public Set<City> findAll() {
         Set<City> cities = new HashSet<>();
 
-        if (!isCacheEmpty()) {
-            logger.debug("findAll() : données retournées depuis le cache ({} éléments).", identityMap.size());
-            return new HashSet<>(identityMap.values());
-        }
+        resetCache();
 
         String sql = "SELECT * FROM VILLES";
         Connection c = ConnectionUtils.getConnection();
@@ -66,15 +63,8 @@ public class CityMapper extends AbstractMapper<City> {
              ResultSet rs = s.executeQuery()) {
 
             while (rs.next()) {
-                int id = rs.getInt("NUMERO");
-
-                if (identityMap.containsKey(id)) {
-                    cities.add(identityMap.get(id));
-                    continue;
-                }
-
                 City city = new City();
-                city.setId(id);
+                city.setId(rs.getInt("NUMERO"));
                 city.setZipCode(rs.getString("CODE_POSTAL"));
                 city.setCityName(rs.getString("NOM_VILLE"));
 

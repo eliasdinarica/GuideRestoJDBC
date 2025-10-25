@@ -20,7 +20,7 @@
             <AppenderRef ref="DEBUG_LOG"/>
         </Logger>-->
         <Root level="DEBUG">
-            <AppenderRef ref="CONSOLE" level="INFO"/>
+            <!--<AppenderRef ref="CONSOLE" level="INFO"/>-->
             <AppenderRef ref="MAIN" level="WARN"/>
             <AppenderRef ref="DEBUG_LOG" level="DEBUG"/>
         </Root>

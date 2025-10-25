@@ -62,10 +62,7 @@ public class CompleteEvaluationMapper extends AbstractMapper<CompleteEvaluation>
     public Set<CompleteEvaluation> findAll() {
         Set<CompleteEvaluation> evaluations = new HashSet<>();
 
-        if (!isCacheEmpty()) {
-            logger.debug("findAll() : données retournées depuis le cache ({} éléments).", identityMap.size());
-            return new HashSet<>(identityMap.values());
-        }
+        resetCache();
 
         String sql = "SELECT * FROM COMMENTAIRES";
         Connection c = ConnectionUtils.getConnection();
@@ -74,15 +71,8 @@ public class CompleteEvaluationMapper extends AbstractMapper<CompleteEvaluation>
              ResultSet rs = s.executeQuery()) {
 
             while (rs.next()) {
-                int id = rs.getInt("NUMERO");
-
-                if (identityMap.containsKey(id)) {
-                    evaluations.add(identityMap.get(id));
-                    continue;
-                }
-
                 CompleteEvaluation evaluation = new CompleteEvaluation();
-                evaluation.setId(id);
+                evaluation.setId(rs.getInt("NUMERO"));
                 evaluation.setVisitDate(rs.getDate("DATE_EVAL"));
                 evaluation.setComment(rs.getString("COMMENTAIRE"));
                 evaluation.setUsername(rs.getString("NOM_UTILISATEUR"));
@@ -221,6 +211,7 @@ public class CompleteEvaluationMapper extends AbstractMapper<CompleteEvaluation>
                     evaluation.setUsername(rs.getString("NOM_UTILISATEUR"));
                     evaluation.setRestaurant(restaurant);
 
+                    addToCache(evaluation);
                     evaluations.add(evaluation);
                 }
             }
@@ -230,5 +221,4 @@ public class CompleteEvaluationMapper extends AbstractMapper<CompleteEvaluation>
 
         return evaluations;
     }
-
 }
