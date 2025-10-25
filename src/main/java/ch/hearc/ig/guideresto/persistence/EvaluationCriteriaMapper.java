@@ -11,8 +11,14 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Mapper pour la gestion des {@link EvaluationCriteria}.
+ * Assure la correspondance entre la table CRITERES_EVALUATION
+ * et les objets métier, avec une gestion du cache (Identity Map).
+ */
 public class EvaluationCriteriaMapper extends AbstractMapper<EvaluationCriteria> {
 
+    /** Cache local des critères déjà chargés (Identity Map). */
     protected static final Map<Integer, EvaluationCriteria> identityMap = new HashMap<>();
 
     @Override
@@ -20,6 +26,13 @@ public class EvaluationCriteriaMapper extends AbstractMapper<EvaluationCriteria>
         return identityMap;
     }
 
+    /**
+     * Recherche un critère d’évaluation par son identifiant.
+     * Si le critère est déjà présent dans le cache, il est retourné directement.
+     *
+     * @param id identifiant unique du critère
+     * @return le critère correspondant, ou {@code null} si absent
+     */
     @Override
     public EvaluationCriteria findById(int id) {
         if (!isCacheEmpty() && identityMap.containsKey(id)) {
@@ -52,10 +65,15 @@ public class EvaluationCriteriaMapper extends AbstractMapper<EvaluationCriteria>
         }
     }
 
+    /**
+     * Récupère tous les critères d’évaluation existants.
+     * Réutilise les instances déjà présentes dans l’Identity Map.
+     *
+     * @return un ensemble de critères d’évaluation
+     */
     @Override
     public Set<EvaluationCriteria> findAll() {
         Set<EvaluationCriteria> criterias = new HashSet<>();
-
         resetCache();
 
         String sql = "SELECT * FROM CRITERES_EVALUATION";
@@ -65,12 +83,18 @@ public class EvaluationCriteriaMapper extends AbstractMapper<EvaluationCriteria>
              ResultSet rs = s.executeQuery()) {
 
             while (rs.next()) {
-                EvaluationCriteria criteria = new EvaluationCriteria();
-                criteria.setId(rs.getInt("NUMERO"));
-                criteria.setName(rs.getString("NOM"));
-                criteria.setDescription(rs.getString("DESCRIPTION"));
+                int id = rs.getInt("NUMERO");
 
-                addToCache(criteria);
+                // ✅ Réutilisation du cache si possible
+                EvaluationCriteria criteria = identityMap.get(id);
+                if (criteria == null) {
+                    criteria = new EvaluationCriteria();
+                    criteria.setId(id);
+                    criteria.setName(rs.getString("NOM"));
+                    criteria.setDescription(rs.getString("DESCRIPTION"));
+                    addToCache(criteria);
+                }
+
                 criterias.add(criteria);
             }
 
@@ -83,9 +107,16 @@ public class EvaluationCriteriaMapper extends AbstractMapper<EvaluationCriteria>
         return criterias;
     }
 
+    /**
+     * Crée un nouveau critère d’évaluation dans la base.
+     *
+     * @param object le critère à persister
+     * @return le critère créé et ajouté au cache, ou {@code null} en cas d’erreur
+     */
     @Override
     public EvaluationCriteria create(EvaluationCriteria object) {
         Connection c = ConnectionUtils.getConnection();
+
         try {
             int nextId = getSequenceValue();
             object.setId(nextId);
@@ -96,14 +127,12 @@ public class EvaluationCriteriaMapper extends AbstractMapper<EvaluationCriteria>
                 s.setInt(1, object.getId());
                 s.setString(2, object.getName());
                 s.setString(3, object.getDescription());
-
                 s.executeUpdate();
                 c.commit();
             }
 
             addToCache(object);
             logger.debug("EvaluationCriteria {} ajouté au cache après création.", object.getId());
-
             return object;
 
         } catch (SQLException e) {
@@ -112,18 +141,25 @@ public class EvaluationCriteriaMapper extends AbstractMapper<EvaluationCriteria>
         }
     }
 
+    /**
+     * Met à jour un critère d’évaluation existant.
+     *
+     * @param object le critère à mettre à jour
+     * @return {@code true} si la mise à jour a réussi, {@code false} sinon
+     */
     @Override
     public boolean update(EvaluationCriteria object) {
         Connection c = ConnectionUtils.getConnection();
-        String sql = "UPDATE CRITERES_EVALUATION " +
-                "SET NOM = ?, DESCRIPTION = ? " +
-                "WHERE NUMERO = ?";
+        String sql = """
+                UPDATE CRITERES_EVALUATION
+                SET NOM = ?, DESCRIPTION = ?
+                WHERE NUMERO = ?
+                """;
 
         try (PreparedStatement s = c.prepareStatement(sql)) {
             s.setString(1, object.getName());
             s.setString(2, object.getDescription());
             s.setInt(3, object.getId());
-
             s.executeUpdate();
             c.commit();
 
@@ -137,6 +173,12 @@ public class EvaluationCriteriaMapper extends AbstractMapper<EvaluationCriteria>
         }
     }
 
+    /**
+     * Supprime un critère d’évaluation de la base.
+     *
+     * @param object le critère à supprimer
+     * @return {@code true} si la suppression a réussi
+     */
     @Override
     public boolean delete(EvaluationCriteria object) {
         Connection c = ConnectionUtils.getConnection();
@@ -157,13 +199,18 @@ public class EvaluationCriteriaMapper extends AbstractMapper<EvaluationCriteria>
         }
     }
 
+    /**
+     * Supprime un critère d’évaluation à partir de son identifiant.
+     *
+     * @param id identifiant du critère
+     * @return {@code true} si la suppression a réussi
+     */
     @Override
     public boolean deleteById(int id) {
         EvaluationCriteria crit = findById(id);
         if (crit == null) return false;
         return delete(crit);
     }
-
 
     @Override
     protected String getSequenceQuery() {

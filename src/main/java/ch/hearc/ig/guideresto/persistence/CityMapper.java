@@ -11,8 +11,15 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Mapper pour la gestion des entités {@link City}.
+ * Assure la correspondance entre la table VILLES et les objets métier.
+ *
+ * Utilise une Identity Map pour éviter la duplication d’instances en mémoire.
+ */
 public class CityMapper extends AbstractMapper<City> {
 
+    /** Cache local des instances chargées (Identity Map). */
     protected static final Map<Integer, City> identityMap = new HashMap<>();
 
     @Override
@@ -20,6 +27,13 @@ public class CityMapper extends AbstractMapper<City> {
         return identityMap;
     }
 
+    /**
+     * Recherche une ville par son identifiant.
+     * Si elle est déjà en cache, elle est retournée directement.
+     *
+     * @param id identifiant unique de la ville
+     * @return la ville correspondante, ou {@code null} si absente
+     */
     @Override
     public City findById(int id) {
         if (!isCacheEmpty() && identityMap.containsKey(id)) {
@@ -32,6 +46,7 @@ public class CityMapper extends AbstractMapper<City> {
 
         try (PreparedStatement s = c.prepareStatement(sql)) {
             s.setInt(1, id);
+
             try (ResultSet rs = s.executeQuery()) {
                 if (!rs.next()) return null;
 
@@ -44,16 +59,21 @@ public class CityMapper extends AbstractMapper<City> {
                 logger.debug("City {} ajoutée au cache.", id);
                 return city;
             }
+
         } catch (SQLException e) {
             logger.error("SQLException in findById({}): {}", id, e.getMessage(), e);
             return null;
         }
     }
 
+    /**
+     * Récupère toutes les villes présentes dans la base.
+     *
+     * @return un ensemble de toutes les villes connues
+     */
     @Override
     public Set<City> findAll() {
         Set<City> cities = new HashSet<>();
-
         resetCache();
 
         String sql = "SELECT * FROM VILLES";
@@ -63,12 +83,18 @@ public class CityMapper extends AbstractMapper<City> {
              ResultSet rs = s.executeQuery()) {
 
             while (rs.next()) {
-                City city = new City();
-                city.setId(rs.getInt("NUMERO"));
-                city.setZipCode(rs.getString("CODE_POSTAL"));
-                city.setCityName(rs.getString("NOM_VILLE"));
+                int id = rs.getInt("NUMERO");
 
-                addToCache(city);
+                // ✅ Réutilisation de l’instance si déjà présente dans le cache
+                City city = identityMap.get(id);
+                if (city == null) {
+                    city = new City();
+                    city.setId(id);
+                    city.setZipCode(rs.getString("CODE_POSTAL"));
+                    city.setCityName(rs.getString("NOM_VILLE"));
+                    addToCache(city);
+                }
+
                 cities.add(city);
             }
 
@@ -81,14 +107,22 @@ public class CityMapper extends AbstractMapper<City> {
         return cities;
     }
 
+    /**
+     * Crée une nouvelle ville dans la base.
+     *
+     * @param object l’objet {@link City} à insérer
+     * @return la ville créée et persistée, ou {@code null} en cas d’erreur
+     */
     @Override
     public City create(City object) {
         Connection c = ConnectionUtils.getConnection();
+
         try {
             int nextId = getSequenceValue();
             object.setId(nextId);
 
             String sql = "INSERT INTO VILLES (NUMERO, CODE_POSTAL, NOM_VILLE) VALUES (?, ?, ?)";
+
             try (PreparedStatement s = c.prepareStatement(sql)) {
                 s.setInt(1, object.getId());
                 s.setString(2, object.getZipCode());
@@ -108,6 +142,12 @@ public class CityMapper extends AbstractMapper<City> {
         }
     }
 
+    /**
+     * Met à jour une ville existante.
+     *
+     * @param object la ville à mettre à jour
+     * @return {@code true} si la mise à jour a réussi, {@code false} sinon
+     */
     @Override
     public boolean update(City object) {
         Connection c = ConnectionUtils.getConnection();
@@ -131,6 +171,12 @@ public class CityMapper extends AbstractMapper<City> {
         }
     }
 
+    /**
+     * Supprime une ville de la base.
+     *
+     * @param object la ville à supprimer
+     * @return {@code true} si la suppression a réussi
+     */
     @Override
     public boolean delete(City object) {
         Connection c = ConnectionUtils.getConnection();
@@ -151,6 +197,12 @@ public class CityMapper extends AbstractMapper<City> {
         }
     }
 
+    /**
+     * Supprime une ville à partir de son identifiant.
+     *
+     * @param id identifiant unique de la ville
+     * @return {@code true} si la suppression a réussi
+     */
     @Override
     public boolean deleteById(int id) {
         City city = findById(id);

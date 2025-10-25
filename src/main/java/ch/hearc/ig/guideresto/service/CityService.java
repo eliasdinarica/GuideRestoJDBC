@@ -3,21 +3,19 @@ package ch.hearc.ig.guideresto.service;
 import ch.hearc.ig.guideresto.business.City;
 import ch.hearc.ig.guideresto.persistence.CityMapper;
 
-import java.util.Date;
-import java.util.HashSet;
 import java.util.Set;
 
 /**
  * Service pour la gestion des villes.
- * Fait le pont entre la couche présentation (Application)
- * et la couche persistance (CityMapper).
+ * Sert d’intermédiaire entre la couche présentation et la couche persistance.
+ * Gère la création, la recherche, la mise à jour et la suppression des villes.
  */
 public class CityService {
 
     private final CityMapper cityMapper = new CityMapper();
 
     /**
-     * Crée une nouvelle ville et la persiste dans la base de données.
+     * Crée une nouvelle ville à partir d’un code postal et d’un nom.
      *
      * @param zipCode  le code postal de la ville
      * @param cityName le nom de la ville
@@ -27,24 +25,29 @@ public class CityService {
         City city = new City();
         city.setZipCode(zipCode);
         city.setCityName(cityName);
-
         return cityMapper.create(city);
     }
 
     /**
-     * Variante : crée une ville déjà construite (plus générique).
+     * Crée une ville à partir d’un objet City déjà instancié.
      *
-     * @param city l'objet City à persister
+     * @param city la ville à persister
      * @return la ville persistée
      */
     public City createCity(City city) {
         return cityMapper.create(city);
     }
 
+    /**
+     * Recharge une ville partiellement chargée depuis la base.
+     * Utile pour le lazy loading de la localisation d’un restaurant.
+     *
+     * @param city la ville potentiellement incomplète
+     * @return la ville complétée depuis la base
+     */
     public City loadCity(City city) {
         if (city == null) return null;
 
-        // Si la ville est partiellement chargée, on la recharge depuis la DB
         if ((city.getCityName() == null || city.getZipCode() == null) && city.getId() != null) {
             City fullCity = cityMapper.findById(city.getId());
             if (fullCity != null) {
@@ -52,7 +55,6 @@ public class CityService {
                 city.setZipCode(fullCity.getZipCode());
             }
         }
-
         return city;
     }
 
@@ -69,7 +71,7 @@ public class CityService {
      * Récupère une ville par son identifiant.
      *
      * @param id identifiant de la ville
-     * @return la ville trouvée, ou null si absente
+     * @return la ville trouvée ou null si absente
      */
     public City findCityById(int id) {
         return cityMapper.findById(id);
@@ -79,7 +81,7 @@ public class CityService {
      * Recherche une ville par son code postal exact.
      *
      * @param zipCode code postal recherché
-     * @return la ville trouvée, ou null si absente
+     * @return la ville trouvée ou null si absente
      */
     public City findCityByZipCode(String zipCode) {
         for (City city : cityMapper.findAll()) {
@@ -101,17 +103,17 @@ public class CityService {
     }
 
     /**
-     * Supprime une ville.
+     * Supprime une ville existante.
      *
      * @param city la ville à supprimer
      * @return true si la suppression a réussi
      */
     public boolean deleteCity(City city) {
-        return cityMapper.delete(city);
+        return city != null && cityMapper.delete(city);
     }
 
     /**
-     * Supprime une ville à partir de son ID.
+     * Supprime une ville à partir de son identifiant.
      *
      * @param id identifiant de la ville
      * @return true si la suppression a réussi

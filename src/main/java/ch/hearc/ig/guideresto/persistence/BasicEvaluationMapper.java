@@ -9,8 +9,16 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Mapper pour la gestion des évaluations basiques (likes/dislikes).
+ * Fait le lien entre la couche de persistance (table LIKES)
+ * et les objets métier {@link BasicEvaluation}.
+ *
+ * Utilise une Identity Map pour garantir l’unicité des instances en mémoire.
+ */
 public class BasicEvaluationMapper extends AbstractMapper<BasicEvaluation> {
 
+    /** Cache local pour les instances déjà chargées (Identity Map). */
     protected static final Map<Integer, BasicEvaluation> identityMap = new HashMap<>();
 
     @Override
@@ -18,6 +26,10 @@ public class BasicEvaluationMapper extends AbstractMapper<BasicEvaluation> {
         return identityMap;
     }
 
+    /**
+     * Recherche une évaluation basique par son identifiant.
+     * Si elle est présente dans le cache, elle est retournée directement.
+     */
     @Override
     public BasicEvaluation findById(int id) {
         if (!isCacheEmpty() && identityMap.containsKey(id)) {
@@ -40,13 +52,13 @@ public class BasicEvaluationMapper extends AbstractMapper<BasicEvaluation> {
                 evaluation.setVisitDate(rs.getDate("DATE_EVAL"));
                 evaluation.setIpAddress(rs.getString("ADRESSE_IP"));
 
+                // 🔹 Création d’un proxy minimal du restaurant (chargement différé)
                 Restaurant restaurant = new Restaurant();
                 restaurant.setId(rs.getInt("FK_REST"));
                 evaluation.setRestaurant(restaurant);
 
                 addToCache(evaluation);
                 logger.debug("BasicEvaluation {} ajoutée au cache.", id);
-
                 return evaluation;
             }
 
@@ -56,10 +68,12 @@ public class BasicEvaluationMapper extends AbstractMapper<BasicEvaluation> {
         }
     }
 
+    /**
+     * Récupère toutes les évaluations basiques présentes dans la base.
+     */
     @Override
     public Set<BasicEvaluation> findAll() {
         Set<BasicEvaluation> evaluations = new HashSet<>();
-
         resetCache();
 
         String sql = "SELECT * FROM LIKES";
@@ -69,17 +83,24 @@ public class BasicEvaluationMapper extends AbstractMapper<BasicEvaluation> {
              ResultSet rs = s.executeQuery()) {
 
             while (rs.next()) {
-                BasicEvaluation evaluation = new BasicEvaluation();
-                evaluation.setId(rs.getInt("NUMERO"));
-                evaluation.setLikeRestaurant("T".equalsIgnoreCase(rs.getString("APPRECIATION")));
-                evaluation.setVisitDate(rs.getDate("DATE_EVAL"));
-                evaluation.setIpAddress(rs.getString("ADRESSE_IP"));
+                int id = rs.getInt("NUMERO");
 
-                Restaurant restaurant = new Restaurant();
-                restaurant.setId(rs.getInt("FK_REST"));
-                evaluation.setRestaurant(restaurant);
+                // ✅ Réutilisation si déjà présent dans l’Identity Map
+                BasicEvaluation evaluation = identityMap.get(id);
+                if (evaluation == null) {
+                    evaluation = new BasicEvaluation();
+                    evaluation.setId(id);
+                    evaluation.setLikeRestaurant("T".equalsIgnoreCase(rs.getString("APPRECIATION")));
+                    evaluation.setVisitDate(rs.getDate("DATE_EVAL"));
+                    evaluation.setIpAddress(rs.getString("ADRESSE_IP"));
 
-                addToCache(evaluation);
+                    Restaurant restaurant = new Restaurant();
+                    restaurant.setId(rs.getInt("FK_REST"));
+                    evaluation.setRestaurant(restaurant);
+
+                    addToCache(evaluation);
+                }
+
                 evaluations.add(evaluation);
             }
 
@@ -92,6 +113,9 @@ public class BasicEvaluationMapper extends AbstractMapper<BasicEvaluation> {
         return evaluations;
     }
 
+    /**
+     * Insère une nouvelle évaluation basique dans la base.
+     */
     @Override
     public BasicEvaluation create(BasicEvaluation object) {
         Connection c = ConnectionUtils.getConnection();
@@ -100,14 +124,17 @@ public class BasicEvaluationMapper extends AbstractMapper<BasicEvaluation> {
             int nextId = getSequenceValue();
             object.setId(nextId);
 
-            String sql = "INSERT INTO LIKES (NUMERO, APPRECIATION, DATE_EVAL, ADRESSE_IP, FK_REST) VALUES (?, ?, ?, ?, ?)";
+            String sql = """
+                    INSERT INTO LIKES (NUMERO, APPRECIATION, DATE_EVAL, ADRESSE_IP, FK_REST)
+                    VALUES (?, ?, ?, ?, ?)
+                    """;
+
             try (PreparedStatement s = c.prepareStatement(sql)) {
                 s.setInt(1, object.getId());
                 s.setString(2, object.getLikeRestaurant() ? "T" : "F");
                 s.setDate(3, new java.sql.Date(object.getVisitDate().getTime()));
                 s.setString(4, object.getIpAddress());
                 s.setInt(5, object.getRestaurant().getId());
-
                 s.executeUpdate();
                 c.commit();
             }
@@ -122,12 +149,17 @@ public class BasicEvaluationMapper extends AbstractMapper<BasicEvaluation> {
         }
     }
 
+    /**
+     * Met à jour une évaluation basique existante.
+     */
     @Override
     public boolean update(BasicEvaluation object) {
         Connection c = ConnectionUtils.getConnection();
-        String sql = "UPDATE LIKES " +
-                "SET APPRECIATION = ?, DATE_EVAL = ?, ADRESSE_IP = ?, FK_REST = ? " +
-                "WHERE NUMERO = ?";
+        String sql = """
+                UPDATE LIKES
+                SET APPRECIATION = ?, DATE_EVAL = ?, ADRESSE_IP = ?, FK_REST = ?
+                WHERE NUMERO = ?
+                """;
 
         try (PreparedStatement s = c.prepareStatement(sql)) {
             s.setString(1, object.getLikeRestaurant() ? "T" : "F");
@@ -149,6 +181,9 @@ public class BasicEvaluationMapper extends AbstractMapper<BasicEvaluation> {
         }
     }
 
+    /**
+     * Supprime une évaluation basique.
+     */
     @Override
     public boolean delete(BasicEvaluation object) {
         Connection c = ConnectionUtils.getConnection();
@@ -169,6 +204,9 @@ public class BasicEvaluationMapper extends AbstractMapper<BasicEvaluation> {
         }
     }
 
+    /**
+     * Supprime une évaluation basique à partir de son identifiant.
+     */
     @Override
     public boolean deleteById(int id) {
         BasicEvaluation eval = findById(id);
@@ -191,6 +229,9 @@ public class BasicEvaluationMapper extends AbstractMapper<BasicEvaluation> {
         return "SELECT COUNT(*) FROM LIKES";
     }
 
+    /**
+     * Récupère toutes les évaluations basiques d’un restaurant donné.
+     */
     public Set<BasicEvaluation> findByRestaurant(Restaurant restaurant) {
         Set<BasicEvaluation> evaluations = new HashSet<>();
         String sql = "SELECT * FROM LIKES WHERE FK_REST = ?";
@@ -198,19 +239,26 @@ public class BasicEvaluationMapper extends AbstractMapper<BasicEvaluation> {
 
         try (PreparedStatement s = c.prepareStatement(sql)) {
             s.setInt(1, restaurant.getId());
+
             try (ResultSet rs = s.executeQuery()) {
                 while (rs.next()) {
-                    BasicEvaluation evaluation = new BasicEvaluation();
-                    evaluation.setId(rs.getInt("NUMERO"));
-                    evaluation.setLikeRestaurant("T".equalsIgnoreCase(rs.getString("APPRECIATION")));
-                    evaluation.setVisitDate(rs.getDate("DATE_EVAL"));
-                    evaluation.setIpAddress(rs.getString("ADRESSE_IP"));
-                    evaluation.setRestaurant(restaurant);
+                    int id = rs.getInt("NUMERO");
 
-                    addToCache(evaluation);
+                    BasicEvaluation evaluation = identityMap.get(id);
+                    if (evaluation == null) {
+                        evaluation = new BasicEvaluation();
+                        evaluation.setId(id);
+                        evaluation.setLikeRestaurant("T".equalsIgnoreCase(rs.getString("APPRECIATION")));
+                        evaluation.setVisitDate(rs.getDate("DATE_EVAL"));
+                        evaluation.setIpAddress(rs.getString("ADRESSE_IP"));
+                        evaluation.setRestaurant(restaurant);
+                        addToCache(evaluation);
+                    }
+
                     evaluations.add(evaluation);
                 }
             }
+
         } catch (SQLException e) {
             logger.error("SQLException in findByRestaurant(): {}", e.getMessage());
         }

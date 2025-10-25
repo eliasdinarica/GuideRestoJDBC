@@ -11,8 +11,14 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Mapper pour la gestion des {@link RestaurantType}.
+ * Permet la persistance et la récupération des types gastronomiques
+ * (ex. : Italien, Japonais, Français), tout en gérant le cache via une Identity Map.
+ */
 public class RestaurantTypeMapper extends AbstractMapper<RestaurantType> {
 
+    /** Cache local des types de restaurants déjà chargés. */
     protected static final Map<Integer, RestaurantType> identityMap = new HashMap<>();
 
     @Override
@@ -20,6 +26,13 @@ public class RestaurantTypeMapper extends AbstractMapper<RestaurantType> {
         return identityMap;
     }
 
+    /**
+     * Recherche un type de restaurant par son identifiant.
+     * Si le type est déjà présent dans le cache, il est renvoyé directement.
+     *
+     * @param id identifiant unique du type gastronomique
+     * @return le type correspondant, ou {@code null} si absent
+     */
     @Override
     public RestaurantType findById(int id) {
         if (!isCacheEmpty() && identityMap.containsKey(id)) {
@@ -52,10 +65,15 @@ public class RestaurantTypeMapper extends AbstractMapper<RestaurantType> {
         }
     }
 
+    /**
+     * Récupère tous les types de restaurants depuis la base.
+     * Réutilise les instances déjà présentes dans le cache.
+     *
+     * @return un ensemble de types gastronomiques
+     */
     @Override
     public Set<RestaurantType> findAll() {
         Set<RestaurantType> types = new HashSet<>();
-
         resetCache();
 
         String sql = "SELECT * FROM TYPES_GASTRONOMIQUES";
@@ -65,12 +83,18 @@ public class RestaurantTypeMapper extends AbstractMapper<RestaurantType> {
              ResultSet rs = s.executeQuery()) {
 
             while (rs.next()) {
-                RestaurantType type = new RestaurantType();
-                type.setId(rs.getInt("NUMERO"));
-                type.setLabel(rs.getString("LIBELLE"));
-                type.setDescription(rs.getString("DESCRIPTION"));
+                int id = rs.getInt("NUMERO");
 
-                addToCache(type);
+                // ✅ Réutilisation du cache si déjà présent
+                RestaurantType type = identityMap.get(id);
+                if (type == null) {
+                    type = new RestaurantType();
+                    type.setId(id);
+                    type.setLabel(rs.getString("LIBELLE"));
+                    type.setDescription(rs.getString("DESCRIPTION"));
+                    addToCache(type);
+                }
+
                 types.add(type);
             }
 
@@ -83,9 +107,16 @@ public class RestaurantTypeMapper extends AbstractMapper<RestaurantType> {
         return types;
     }
 
+    /**
+     * Crée un nouveau type gastronomique et le persiste dans la base.
+     *
+     * @param object le type de restaurant à créer
+     * @return le type créé et ajouté au cache, ou {@code null} en cas d’erreur
+     */
     @Override
     public RestaurantType create(RestaurantType object) {
         Connection c = ConnectionUtils.getConnection();
+
         try {
             int nextId = getSequenceValue();
             object.setId(nextId);
@@ -96,14 +127,12 @@ public class RestaurantTypeMapper extends AbstractMapper<RestaurantType> {
                 s.setInt(1, object.getId());
                 s.setString(2, object.getLabel());
                 s.setString(3, object.getDescription());
-
                 s.executeUpdate();
                 c.commit();
             }
 
             addToCache(object);
             logger.debug("RestaurantType {} ajouté au cache après création.", object.getId());
-
             return object;
 
         } catch (SQLException e) {
@@ -112,18 +141,25 @@ public class RestaurantTypeMapper extends AbstractMapper<RestaurantType> {
         }
     }
 
+    /**
+     * Met à jour un type gastronomique existant dans la base.
+     *
+     * @param object le type à mettre à jour
+     * @return {@code true} si la mise à jour a réussi
+     */
     @Override
     public boolean update(RestaurantType object) {
         Connection c = ConnectionUtils.getConnection();
-        String sql = "UPDATE TYPES_GASTRONOMIQUES " +
-                "SET LIBELLE = ?, DESCRIPTION = ? " +
-                "WHERE NUMERO = ?";
+        String sql = """
+            UPDATE TYPES_GASTRONOMIQUES
+            SET LIBELLE = ?, DESCRIPTION = ?
+            WHERE NUMERO = ?
+        """;
 
         try (PreparedStatement s = c.prepareStatement(sql)) {
             s.setString(1, object.getLabel());
             s.setString(2, object.getDescription());
             s.setInt(3, object.getId());
-
             s.executeUpdate();
             c.commit();
 
@@ -137,6 +173,12 @@ public class RestaurantTypeMapper extends AbstractMapper<RestaurantType> {
         }
     }
 
+    /**
+     * Supprime un type gastronomique de la base.
+     *
+     * @param object le type à supprimer
+     * @return {@code true} si la suppression a réussi
+     */
     @Override
     public boolean delete(RestaurantType object) {
         Connection c = ConnectionUtils.getConnection();
@@ -157,6 +199,12 @@ public class RestaurantTypeMapper extends AbstractMapper<RestaurantType> {
         }
     }
 
+    /**
+     * Supprime un type gastronomique à partir de son identifiant.
+     *
+     * @param id identifiant du type
+     * @return {@code true} si la suppression a réussi
+     */
     @Override
     public boolean deleteById(int id) {
         RestaurantType type = findById(id);
