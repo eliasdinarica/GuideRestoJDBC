@@ -20,9 +20,11 @@ import java.util.Set;
 public class RestaurantService {
 
     private final RestaurantMapper restaurantMapper = new RestaurantMapper();
-    private final BasicEvaluationMapper basicEvaluationMapper = new BasicEvaluationMapper();
-    private final CompleteEvaluationMapper completeEvaluationMapper = new CompleteEvaluationMapper();
+
+    private final BasicEvaluationService basicEvaluationService = new BasicEvaluationService();
+
     private final CompleteEvaluationService completeEvaluationService = new CompleteEvaluationService();
+    private final CityService cityService = new CityService();
 
     public Restaurant createRestaurant(Restaurant restaurant) {
         return restaurantMapper.create(restaurant);
@@ -42,12 +44,12 @@ public class RestaurantService {
 
     public boolean deleteRestaurant(Restaurant restaurant) {
         try {
-            Set<BasicEvaluation> basicEvaluations = basicEvaluationMapper.findByRestaurant(restaurant);
+            Set<BasicEvaluation> basicEvaluations = basicEvaluationService.findByRestaurant(restaurant);
             for (BasicEvaluation eval : basicEvaluations) {
-                basicEvaluationMapper.delete(eval);
+                basicEvaluationService.deleteBasicEvaluation(eval);
             }
 
-            Set<CompleteEvaluation> completeEvaluations = completeEvaluationMapper.findByRestaurant(restaurant);
+            Set<CompleteEvaluation> completeEvaluations = completeEvaluationService.findByRestaurant(restaurant);
             for (CompleteEvaluation eval : completeEvaluations) {
                 completeEvaluationService.deleteCompleteEvaluation(eval);
             }
@@ -74,8 +76,8 @@ public class RestaurantService {
 
         if (restaurant.getEvaluations() == null || restaurant.getEvaluations().isEmpty()) {
             Set<Evaluation> evaluations = new HashSet<>();
-            evaluations.addAll(basicEvaluationMapper.findByRestaurant(restaurant));
-            evaluations.addAll(completeEvaluationMapper.findByRestaurant(restaurant));
+            evaluations.addAll(basicEvaluationService.findByRestaurant(restaurant));
+            evaluations.addAll(completeEvaluationService.findByRestaurant(restaurant));
             restaurant.setEvaluations(evaluations);
         }
 
@@ -85,7 +87,8 @@ public class RestaurantService {
                     completeEvaluationService.loadGrades(completeEval);
                 }
             }
-
     }
+
+
 
 }

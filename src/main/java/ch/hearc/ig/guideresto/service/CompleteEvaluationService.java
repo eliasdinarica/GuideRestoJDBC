@@ -17,7 +17,21 @@ import java.util.Set;
 public class CompleteEvaluationService {
 
     private final CompleteEvaluationMapper completeEvaluationMapper = new CompleteEvaluationMapper();
-    private final GradeService gradeService = new GradeService();
+    private GradeService gradeService; // ⚙️ plus de final -> lazy injection
+
+    // Setter pour injection croisée
+    public void setGradeService(GradeService gradeService) {
+        this.gradeService = gradeService;
+    }
+
+    // Lazy getter pour éviter le StackOverflowError
+    private GradeService getGradeService() {
+        if (this.gradeService == null) {
+            this.gradeService = new GradeService();
+            this.gradeService.setEvaluationService(this);
+        }
+        return this.gradeService;
+    }
 
     public CompleteEvaluation createCompleteEvaluation(Restaurant restaurant, String comment, String username) {
         CompleteEvaluation evaluation = new CompleteEvaluation();
@@ -38,7 +52,7 @@ public class CompleteEvaluationService {
         // Lazy load des grades avant suppression
         Set<Grade> grades = loadGrades(evaluation);
         for (Grade grade : grades) {
-            gradeService.deleteGrade(grade);
+            getGradeService().deleteGrade(grade);
         }
 
         return completeEvaluationMapper.delete(evaluation);
@@ -49,6 +63,10 @@ public class CompleteEvaluationService {
         return deleteCompleteEvaluation(eval);
     }
 
+    public CompleteEvaluation findById(int id) {
+        return completeEvaluationMapper.findById(id);
+    }
+
     public Set<CompleteEvaluation> findByRestaurant(Restaurant restaurant) {
         return completeEvaluationMapper.findByRestaurant(restaurant);
     }
@@ -57,7 +75,7 @@ public class CompleteEvaluationService {
         if (evaluation == null || criteria == null)
             throw new IllegalArgumentException("Evaluation et critère doivent être non nuls.");
 
-        Grade grade = gradeService.createGrade(note, evaluation, criteria);
+        Grade grade = getGradeService().createGrade(note, evaluation, criteria);
         evaluation.getGrades().add(grade);
         return grade;
     }
@@ -69,7 +87,7 @@ public class CompleteEvaluationService {
         if (evaluation == null) return Set.of();
 
         if (evaluation.getGrades() == null || evaluation.getGrades().isEmpty()) {
-            Set<Grade> loaded = gradeService.findByEvaluation(evaluation);
+            Set<Grade> loaded = getGradeService().findByEvaluation(evaluation);
             evaluation.setGrades(new HashSet<>(loaded));
         }
 

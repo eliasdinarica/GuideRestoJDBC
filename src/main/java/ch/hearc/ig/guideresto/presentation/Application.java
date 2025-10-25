@@ -115,6 +115,7 @@ public class Application {
         Set<Restaurant> filteredList = new LinkedHashSet<>();
 
         for (Restaurant currentRestaurant : fullList) {
+
             if (currentRestaurant.getAddress().getCity().getCityName().toUpperCase().contains(research.toUpperCase())) {
                 filteredList.add(currentRestaurant);
             }

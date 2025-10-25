@@ -41,6 +41,21 @@ public class CityService {
         return cityMapper.create(city);
     }
 
+    public City loadCity(City city) {
+        if (city == null) return null;
+
+        // Si la ville est partiellement chargée, on la recharge depuis la DB
+        if ((city.getCityName() == null || city.getZipCode() == null) && city.getId() != null) {
+            City fullCity = cityMapper.findById(city.getId());
+            if (fullCity != null) {
+                city.setCityName(fullCity.getCityName());
+                city.setZipCode(fullCity.getZipCode());
+            }
+        }
+
+        return city;
+    }
+
     /**
      * Récupère toutes les villes présentes dans la base.
      *

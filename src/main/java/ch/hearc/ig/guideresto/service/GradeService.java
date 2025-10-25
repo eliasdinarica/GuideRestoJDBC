@@ -4,8 +4,6 @@ import ch.hearc.ig.guideresto.business.CompleteEvaluation;
 import ch.hearc.ig.guideresto.business.EvaluationCriteria;
 import ch.hearc.ig.guideresto.business.Grade;
 import ch.hearc.ig.guideresto.persistence.GradeMapper;
-import ch.hearc.ig.guideresto.persistence.EvaluationCriteriaMapper;
-import ch.hearc.ig.guideresto.persistence.CompleteEvaluationMapper;
 
 import java.util.Set;
 
@@ -16,8 +14,22 @@ import java.util.Set;
 public class GradeService {
 
     private final GradeMapper gradeMapper = new GradeMapper();
-    private final CompleteEvaluationMapper evaluationMapper = new CompleteEvaluationMapper();
-    private final EvaluationCriteriaMapper criteriaMapper = new EvaluationCriteriaMapper();
+    private CompleteEvaluationService evaluationService; // ⚙️ plus de final -> lazy
+    private final EvaluationCriteriaService criteriaService = new EvaluationCriteriaService();
+
+    // Setter pour injection croisée
+    public void setEvaluationService(CompleteEvaluationService evaluationService) {
+        this.evaluationService = evaluationService;
+    }
+
+    // Lazy getter pour éviter le StackOverflowError
+    private CompleteEvaluationService getEvaluationService() {
+        if (this.evaluationService == null) {
+            this.evaluationService = new CompleteEvaluationService();
+            this.evaluationService.setGradeService(this);
+        }
+        return this.evaluationService;
+    }
 
     public Grade createGrade(int value, CompleteEvaluation evaluation, EvaluationCriteria criteria) {
         Grade grade = new Grade();
@@ -60,7 +72,7 @@ public class GradeService {
      */
     public CompleteEvaluation loadEvaluation(Grade grade) {
         if (grade.getEvaluation() == null || grade.getEvaluation().getUsername() == null) {
-            CompleteEvaluation eval = evaluationMapper.findById(grade.getEvaluation().getId());
+            CompleteEvaluation eval = getEvaluationService().findById(grade.getEvaluation().getId());
             grade.setEvaluation(eval);
         }
         return grade.getEvaluation();
@@ -71,7 +83,7 @@ public class GradeService {
      */
     public EvaluationCriteria loadCriteria(Grade grade) {
         if (grade.getCriteria() == null || grade.getCriteria().getName() == null) {
-            EvaluationCriteria criteria = criteriaMapper.findById(grade.getCriteria().getId());
+            EvaluationCriteria criteria = criteriaService.findById(grade.getCriteria().getId());
             grade.setCriteria(criteria);
         }
         return grade.getCriteria();
